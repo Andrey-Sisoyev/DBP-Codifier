@@ -1,0 +1,86 @@
+You may obtain a copy of DB package template from network location:
+    http://github.com/Andrey-Sisoyev/DBP-tpl
+
+
+Aims of the DB packaging standard
+-------------------------------------------------------------------------------
+This DB package is made out of a template. Originally template was made 
+to provide way of building a DB system by "summing up" a set of 
+such DB packages. The summing is made easy: run first (usually most general) 
+package "db_inst.sh" with 4th parameter = "new". This will create
+a new DB schema for your application. In all subsequent (probably dependent) 
+packages run "db_inst.sh" with this (4th) parameter "existent" - this will 
+build up more and more DB objects shaping your DB. Wether to choose 
+new database or existent is up to you - if you need multiple applications to 
+be able to share and/or one to access some data of another - then it's best
+to put applications in dedicated schemas under one database. If applications 
+are to be independent and not connected at all, then it's best to place them
+in different DBs.
+
+Obvious weaknesses of this packaging system:
+1. It won't seek dependencies of DB packages. This you must do on your own.
+2. Once DB package is installed into existent application, there's no fast and 
+universal way to remove it (DB package) from application. This makes versioning 
+of DB packages a headache.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+
+Standard DB structure template
+-------------------------------------------------------------------------------
+The scripts set is made to initialize DB using a stadard developed by 
+the author of this package.
+Standard includes 
+a) naming convetion
+b) specific use of tablespaces
+c) specific set of DB objects for an application
+It is extendible for specific applications, but for simpliest general case is 
+considered to be such.
+
+Variables:
+    <<$db_name$>> 
+        is a variable containing DB name [_A-Za-z].
+        One DB may contain multuple (possibly) interconnected applications.
+        (use no uppercase !!!)
+    <<$app_name$>> 
+        is an application name [_A-Za-z].
+        (use no uppercase !!!)
+    <<$PGDATA$>>
+        OS environmetntal variable PGDATA 
+        (for example: "/var/lib/postgres/data/")
+
+For any application there are following DB objects:
+1. Database top level (init_db.sql):
+     1.1. Data base named '<<$db_name$>>', with support of language "plpgsql"
+     1.2. Default tablespace named 'tabsp_<<$db_name$>>_dflt'
+     (Tablespace location directory:
+     '<<$PGDATA$>>pg_tblspc/<<$db_name$>>/dafault.data')
+
+     1.3. User named 'user_<<$db_name$>>_owner':
+             * with initial password = 'db_owner_password'
+             * superuser of this DB
+     (Security concern: don't forget to change password)
+2. Application outer level (init_schema.sql):
+     2.1. User named 'user_<<$app_name$>>_owner':
+             * with initial password = 'app_owner_password'
+             * superuser of schema 'sch_<<$app_name$>>' (2.6.)
+     2.2. User named 'user_<<$app_name$>>_data_admin' 
+             * with initial password = 'app_data_admin_password')
+     2.3. User named 'user_<<$app_name$>>_data_reader'
+             * with initial password = 'app_data_reader_password')
+     (Security concern: don't forget to change passwords)
+
+     2.4. Tablespace named 'tabsp_<<$db_name$>>_<<$app_name$>>'
+     2.5. Tablespace named 'tabsp_<<$db_name$>>_<<$app_name$>>_idxs' (for indexes only)
+     (Both tablespaces be located in the directory 
+     '<<$PGDATA$>>/pg_tblspc/<<$db_name$>>/<<$app_name$>>')
+
+     2.6. Schema 'sch_<<$app_name$>>' with owner 'user_<<$app_name$>>_owner'
+Other objects, depending on package content:
+3. Application inner level (structure.sql): tables, sequences, indexes, triggers, grants, functions, some low level data, etc.
+4. Application initial data (data.sql): inserts, updates.
+
+Levels 2,3,4,5 must not depend on objects on level 1, except for database named
+"<<$db_name$>>".
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
