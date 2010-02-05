@@ -1,0 +1,16 @@
+0.1
+--------------------------------------------
+* First prototype version of DB packager
+
+
+Changes from 0.1 to 0.2
+--------------------------------------------
+* Completely different approach. Codes now may interconnect in grafs 
+  of codifiers, whereas older version allowed only tree-like structures.
+* API intoduced. It's now possible (recommended) to work with codifiers 
+  using only functions, without referring codes tables.
+
+
+Changes from 0.2 to 0.3
+--------------------------------------------
+* New version of STANDARD (0.3)

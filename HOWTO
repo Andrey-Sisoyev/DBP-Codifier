@@ -1,0 +1,199 @@
+-- Copyright (C) 2010 Andrejs Sisojevs <andrejs.sisojevs@nextmail.ru>
+-- 
+-- All rights reserved.
+-- 
+-- For information about license see COPYING file in the root directory of current nominal package
+
+TOC
+-------------------------------------------------------------------------------
+A. Main commands
+B. How to install the package?
+C. Note on supported platforms.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+
+A. Main commands
+-------------------------------------------------------------------------------
+The executable to work with the package is the "db_inst.sh". 
+It supports 3 classes of commands: 
+(1) Show manual
+(2) Pack/unpack - forms the package may take
+(3) "Business" commands - working with DB (See section B)
+
+Details:
+(1) Show manual
+Showing manual deals with outputing this file (HOWTO):
+   > db_inst.sh ( --help | -? | ? )
+These two outputs manual using "less" viewer:
+   > db_inst.sh [ --man ]
+
+(2) The package - it's files-directories structure may take two forms: packed 
+and unpacked. When package is PACKED, it's easier to cocentrate 
+on the "business" part of the package - the package-specific DB structures provided by the package and accompanyind documentation (models, licencing).
+The UNPACKED state of the package, is to be used, when developing 
+new version of STANDARD, f.e., when one have to change set of DB users, 
+schemas, tablespaces, and other DB top level objects, that provided by package.
+In one moment, package may be only in one state - either packed, or unpacked. 
+It's easy to transform package from one state to another:
+Additional commands:
+   > db_inst.sh --pack   [--clean]
+   > db_inst.sh --unpack [--clean]
+
+First command runs from unpacked package - it creates directory "packed-dist", 
+where puts copies package in a packed state. Second - runs from packed package 
+to create directory "unpacked-dist", where all the files and directories gets copied in a new configuration.
+By the way, when DB commands gets run with packed package, it first gets unpacked, then commands are passed to unpacked version of db_inst.sh script.
+
+(3) See section B.
+
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+
+B. How to install the package?
+-------------------------------------------------------------------------------
+Requirements: 
+    Linux, 
+    sed, bash, less, tar
+    PostgreSQL, 
+    $PGDATA, 
+    permissions to create DB (at most) or 
+                to create DB objects (like tables) in a concrete application 
+                                                        schema (at least)
+    PERMISSIONS to write in $PGDATA directory
+
+To install this DB package (in PostgreSQL, in Linux) run script:
+> db_inst.sh <db_name> (--drop | --new | --overwrite | --existing | --list) <app_name> (--drop | --new | --overwrite | --existing | --list) (--drop | --new | --overwrite | --existing) [1]
+
+Parameters:
+(1) <db_name> 
+        your DB name "[_a-z][-_a-z0-9.]*", in which the application will work.
+(2) (--drop | --new | --overwrite | --existing | --list) after <db_name> 
+        --drop
+           Delete an existing DB with name <db_name>.
+           Will return an error, if there is no such database.
+        --new
+           Create new DB with name <db_name> using scripts in this package.
+           Will return an error, if there already is a database with such name.
+        --overwrite
+           = --drop -> --new
+        --existing
+           DB with name <db_name> already exists, and you don't want 
+           to change it.
+           The existing DB must be compatible with *DB structure standard*, 
+           which is used here (see file STANDARD). 
+        --list
+           Lists all applications available in the data base <db_name>.
+(3) <app_name> 
+        your application name "[_a-z][-_a-z0-9.]*", it's also used 
+        in schema name.
+(4) (--drop | --new | --overwrite | --existing | --list) after <app_name>  
+        --drop
+           Delete an existing schema named <app_name> in DB <db_name>.
+           Will return an error, if there is no such application, or if it's 
+           installed using package, that is based on a different version of 
+           DBP template (field "Template" in the PKG-INFO file) - since it may
+           use different version of STANDARD.
+        --new
+           Use it, if you want to create a new schema named <app_name>, 
+           in DB with name <db_name>, using scripts in this package.  
+           Will return an error, if there already is such application.
+        --overwrite
+           = --drop -> --new
+        --existing
+           DB with name <db_name> already contains a schema with name <app_name>, 
+           and you don't want to change it.
+           Will return an error, if there is no such application, or if it's 
+           installed using package, that is based on a different version of 
+           DBP template (field "Template" in the PKG-INFO file) - since it may
+           use different version of STANDARD. 
+        --list
+           Lists all packages available in the data base <db_name>, 
+           application named <app_name>.
+(5) (--drop | --new | --overwrite | --existing) for the package 
+        --drop
+           Delete existing package (tables, functions, etc) 
+           from the application.
+           Will return an error, if the package isn't registered 
+           to be installed in the application, or if it is of different version.
+        --new
+           Create a new package in the DB <db_name>, application <app_name>.
+           Will return an error
+           substructure there using scripts in this package.
+        --existing
+           DB <db_name> objects (like tables, functions) are already 
+           there in the DB <db_name> schema <app_name>, and you don't want to 
+           change that.
+           The existing DB structure must be same as in this package 
+           content.
+           This option is used to run only test script on existind DB. 
+           Warning!! Accordind to the standard used here, the test script 
+           doesn't have to leave DB unchanged. F.e., it may use SEQUENCE, 
+           and then restart it at minimal value.
+(6) [1] (optional "1")
+        if you put "1" 
+           then you will get resulting log file content viewed by "less". 
+           Recommended.
+
+Allowed DB commands combinations:
+   ## | <DB name> | <App. name> | This package
+   ---|-----------|-------------|---------------
+    1 | existing  | existing    | existing
+    2 | drop      | drop        | drop
+    3 | drop      | drop        |
+    4 | drop      |             |     
+    5 | existing  | drop        |     
+    6 | existing  | existing    | drop
+    7 | new       | new         | new
+    8 | existing  | new         | new
+    9 | existing  | existing    | new
+   10 | overwrite | new         | new
+   11 | existing  | overwrite   | new
+   12 | existing  | existing    | overwrite
+   13 | list      |             |
+   14 | existing  | list        |
+
+Commands represantations as command line arguments:
+    Command   | Long form   | Short form  
+   -----------|-------------|---------------
+    new       | --new       | -n      
+    drop      | --drop      | -d      
+    existing  | --existing  | -e      
+    overwrite | --overwrite | -w
+    list      | --list      | -l
+
+For the combinations 3,4,5,13,14, usage: 
+    $progname <db_name> [ --drop | -d ] <app_name> [ --drop | -d ] [1]
+    $progname <db_name> [ --drop | -d ] [1]
+    $progname <db_name> [ --existing | -e ] <app_name> [ --drop | -d ] [1]
+    $progname <db_name> [ --list | -e ] [1]
+    $progname <db_name> [ --existing | -e ] <app_name> [ --list | -l ] [1]
+
+Since the PostgreSQL has some strange case-sensitivity behaviour 
+in the \c[onnect] command, it is decided to use lowercase DB and 
+application names only - "[_a-z][-_a-z0-9.]*" instead of 
+"[_a-zA-Z][-_a-zA-Z0-9.]*". 
+Otherwise, script were not guaranteed to work properly.
+
+Check "db_inst.sh.log" to make sure that no problems occurred.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+
+C. Note on supported platforms.
+-------------------------------------------------------------------------------
+Originally this DB packaging concept was aimed to work with 
+any DBMS (Data Base Management System) supported by HDBC haskell package, 
+and independent of OS. However, it is made and tested 
+only in(for) ArchLinux and PostgreSQL v8.4. 
+The installation script uses some standard DB structure template,
+to realize which (make a real sql script from template) *bash* and *sed* 
+scripts are used. Also SQL scripts use "rm -rf" Linux commands.
+
+Thus this DB packaging is currently provided to work only in OSes, that 
+support *bash* and *sed* - Linux an other *nixes; and only with PostgreSQL DBMS.
+
+But it's not hard to port this DB packaging standard to other OSes, I guess. 
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
