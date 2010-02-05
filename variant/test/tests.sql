@@ -12,206 +12,646 @@
 SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
 \set ECHO queries
 
+\echo WARNING!!! This tester is not guaranteed to be safe for user data - do not apply it where user already defined it's codes!!
+
 SELECT * FROM codes;
 SELECT * FROM codes_tree;
 SELECT * FROM codes_names;
 
-SELECT get_code_by_codeid(2);
-SELECT get_nonplaincode_by_codestr('Statuses sets');
-SELECT type_of_code(2);
-SELECT get_codified_view_by_codestr('Root codifier', 'Statuses sets');
+---------
 
---------
+\echo =======Testing referencing functions=========================
 
-SELECT new_codifier(ROW('test codifier', 'codifier'), (get_nonplaincode_by_codestr('Root codifier')).code_id );
+\echo >>>>>Show code_key
+SELECT show_codekey(make_codekey_null());
+SELECT show_codekey(make_codekey_byid(777));
+SELECT show_codekey(make_codekey_bystr('Hello!'));
 
-SELECT new_code(ROW('test code 1', 'plain code'), (get_nonplaincode_by_codestr('test codifier')).code_id);
-SELECT new_code(ROW('test code 2', 'codifier')  , (get_nonplaincode_by_codestr('test codifier')).code_id);
-SELECT new_codifier(ROW('test code 3', 'metacodifier'), (get_nonplaincode_by_codestr('test code 2')).code_id);
-\echo ---Tester: following command should rise an error.---
-SELECT new_codifier(ROW('test code 4', 'plain code')  , (get_nonplaincode_by_codestr('test code 2')).code_id);
-SELECT new_code(ROW('test code 5', 'plain code'), (get_nonplaincode_by_codestr('test code 2')).code_id );
-SELECT new_code(ROW('test code 6', 'plain code'), (get_nonplaincode_by_codestr('test code 2')).code_id );
-SELECT new_code(ROW('test code 7', 'plain code'), (get_nonplaincode_by_codestr('test code 2')).code_id );
-SELECT new_code(ROW('test code 8', 'plain code'), (get_nonplaincode_by_codestr('test code 2')).code_id );
+\echo >>>>>Show addressed_code_key
+SELECT show_acodekey(make_acodekey_null());
+SELECT show_acodekey(make_acodekey(make_codekey_bystr('Codifier key!'), make_codekey_bystr('Code key!')));
+
+\echo >>>>>Show code_key_by_language
+SELECT show_codekeyl(make_codekeyl(make_codekey_bystr('Language key!'), make_codekey_bystr('Code key!')));
+SELECT show_codekeyl(make_codekeyl_null());
+SELECT show_codekeyl(make_codekeyl_byid(777));
+SELECT show_codekeyl(make_codekeyl_bystr('Code key!'));
+SELECT show_codekeyl(make_codekeyl_bystrl(make_codekey_bystr('Language key!'), 'Code key!'));
+
+\echo >>>>>Show addressed_code_key_by_language
+SELECT show_acodekeyl(make_acodekeyl_null());
+SELECT show_acodekeyl(make_acodekeyl(make_codekey_bystr('Language key!'), make_codekey_bystr('Codifier key!'), make_codekey_bystr('Code key!')));
+SELECT show_acodekeyl(make_acodekeyl_byid(777));
+SELECT show_acodekeyl(make_acodekeyl_bystr1('Code key!'));
+SELECT show_acodekeyl(make_acodekeyl_bystr2('Codifier key!', 'Code key!'));
+
+\echo >>>>>Generalize code keys
+SELECT show_acodekeyl(generalize_codekey(make_acodekeyl_null()));
+SELECT show_acodekeyl(generalize_codekey(make_codekey_byid(777)));
+SELECT show_acodekeyl(generalize_codekey(make_codekey_bystr('Hello!')));
+SELECT show_acodekeyl(generalize_acodekey(make_acodekey_null()));
+SELECT show_acodekeyl(generalize_acodekey(make_acodekey(make_codekey_bystr('Codifier key!'), make_codekey_bystr('Code key!'))));
+SELECT show_acodekeyl(generalize_codekeyl(make_codekeyl_null()));
+SELECT show_acodekeyl(generalize_codekeyl(make_codekeyl(make_codekey_bystr('Language key!'), make_codekey_bystr('Code key!'))));
+
+\echo >>>>>Type of code_key
+SELECT 'undef'            = codekey_type(make_codekey_null());
+SELECT 'c_id'             = codekey_type(make_codekey_byid(777));
+SELECT 'c_nm (-l,-cf)'    = codekey_type(make_codekey_bystr('Hello!'));
+
+\echo >>>>>Type of addressed_code_key
+SELECT 'undef'            = acodekey_type(make_acodekey_null());
+SELECT 'c_id'             = acodekey_type(make_acodekey(make_codekey_null(), make_codekey_byid(777)));
+SELECT 'c_nm (-l,-cf)'    = acodekey_type(make_acodekey(make_codekey_null(), make_codekey_bystr('Code key!')));
+SELECT 'c_nm (-l,+cf_id)' = acodekey_type(make_acodekey(make_codekey_byid(777), make_codekey_bystr('Code key!')));
+SELECT 'c_nm (-l,+cf_nm)' = acodekey_type(make_acodekey(make_codekey_bystr('Codifier key!'), make_codekey_bystr('Code key!')));
+SELECT 'cf_id'            = acodekey_type(make_acodekey(make_codekey_byid(777), make_codekey_null()));
+SELECT 'cf_nm (-l)'       = acodekey_type(make_acodekey(make_codekey_bystr('Codifier key!'), make_codekey_null()));
+
+\echo >>>>>Type of code_key_by_language
+SELECT 'undef'            = codekeyl_type(make_codekeyl_null());
+SELECT 'c_id'             = codekeyl_type(make_codekeyl_byid(777));
+SELECT 'c_nm (-l,-cf)'    = codekeyl_type(make_codekeyl_bystr('Code key!'));
+SELECT 'c_nm (+l_id,-cf)' = codekeyl_type(make_codekeyl_bystrl(make_codekey_byid(777), 'Code key!'));
+SELECT 'c_nm (+l_nm,-cf)' = codekeyl_type(make_codekeyl_bystrl(make_codekey_bystr('Language key!'), 'Code key!'));
+
+\echo >>>>>Type of addressed_code_key_by_language
+SELECT 'undef'               = acodekeyl_type(make_acodekeyl_null());
+SELECT 'c_id'                = acodekeyl_type(make_acodekeyl_byid(777));
+SELECT 'c_nm (-l,-cf)'       = acodekeyl_type(make_acodekeyl_bystr1('Code key!'));
+SELECT 'c_nm (-l,+cf_id)'    = acodekeyl_type(make_acodekeyl(make_codekey_null()                , make_codekey_byid(777)             , make_codekey_bystr('Code key!')));
+SELECT 'c_nm (-l,+cf_nm)'    = acodekeyl_type(make_acodekeyl(make_codekey_null()                , make_codekey_bystr('Codifier key!'), make_codekey_bystr('Code key!')));
+SELECT 'c_nm (+l_id,-cf)'    = acodekeyl_type(make_acodekeyl(make_codekey_byid(777)             , make_codekey_null()                , make_codekey_bystr('Code key!')));
+SELECT 'c_nm (+l_id,+cf_id)' = acodekeyl_type(make_acodekeyl(make_codekey_byid(777)             , make_codekey_byid(777)             , make_codekey_bystr('Code key!')));
+SELECT 'c_nm (+l_id,+cf_nm)' = acodekeyl_type(make_acodekeyl(make_codekey_byid(777)             , make_codekey_bystr('Codifier key!'), make_codekey_bystr('Code key!')));
+SELECT 'c_nm (+l_nm,-cf)'    = acodekeyl_type(make_acodekeyl(make_codekey_bystr('Language key!'), make_codekey_null()                , make_codekey_bystr('Code key!')));
+SELECT 'c_nm (+l_nm,+cf_id)' = acodekeyl_type(make_acodekeyl(make_codekey_bystr('Language key!'), make_codekey_byid(777)             , make_codekey_bystr('Code key!')));
+SELECT 'c_nm (+l_nm,+cf_nm)' = acodekeyl_type(make_acodekeyl(make_codekey_bystr('Language key!'), make_codekey_bystr('Codifier key!'), make_codekey_bystr('Code key!')));
+SELECT 'cf_id'               = acodekeyl_type(make_acodekeyl(make_codekey_null()                , make_codekey_byid(777)             , make_codekey_null()            ));
+SELECT 'cf_nm (-l)'          = acodekeyl_type(make_acodekeyl(make_codekey_null()                , make_codekey_bystr('Codifier key!'), make_codekey_null()            ));
+SELECT 'cf_nm (+l_id)'       = acodekeyl_type(make_acodekeyl(make_codekey_byid(777)             , make_codekey_bystr('Codifier key!'), make_codekey_null()            ));
+SELECT 'cf_nm (+l_nm)'       = acodekeyl_type(make_acodekeyl(make_codekey_bystr('Language key!'), make_codekey_bystr('Codifier key!'), make_codekey_null()            ));
+
+\echo =======Referencing functions tested==========================
+
+\echo =======Testing administration and lookup functions===========
+
+CREATE OR REPLACE FUNCTION remove_test_set() RETURNS integer AS $$
+DECLARE 
+        out_r RECORD;
+BEGIN
+        SELECT remove_code(TRUE, make_acodekeyl_bystr('test codifier'), TRUE)
+        INTO out_r; RAISE NOTICE 'Output(remove_test_set): %', out_r;
+
+        RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+\echo File: docs/models/Testing.CodesStructure.ver.odg
+CREATE OR REPLACE FUNCTION create_test_set() RETURNS integer AS $$
+DECLARE 
+        out_r RECORD;
+BEGIN
+        PERFORM remove_test_set();
+
+        SELECT new_codifier_w_subcodes(
+                        make_codekeyl_bystr('Root codifier')
+                      , ROW('test codifier', 'codifier') :: code_construction_input
+                      , '101'
+                      , VARIADIC ARRAY[ 
+                                ROW('101', 'plain code')
+                              , ROW('999', 'plain code')
+                              ] :: code_construction_input[]
+                      )
+        INTO out_r; RAISE NOTICE 'Output(create_test_set): %', out_r;
+        
+        SELECT make_codifier_from_plaincode_w_values(
+                        TRUE
+                      , TRUE
+                      , make_codekeyl_bystr('101')
+                      , 'codifier'
+                      , '201'
+                      , VARIADIC ARRAY[ 
+                                ROW('201', 'codifier')
+                              , ROW('202', 'codifier')
+                              , ROW('203', 'codifier')
+                              , ROW('204', 'codifier')
+                              , ROW('205', 'codifier')
+                              , ROW('206', 'codifier')
+                              , ROW('207', 'codifier')
+                              , ROW('208', 'codifier')
+                              , ROW('209', 'codifier')
+                              ] :: code_construction_input[]
+                      )
+        INTO out_r; RAISE NOTICE 'Output(create_test_set): %', out_r;
+
+        SELECT add_subcodes_under_codifier(
+                        make_codekeyl_bystr('201')
+                      , '301'
+                      , VARIADIC ARRAY[ 
+                                ROW('301', 'codifier')
+                              , ROW('302', 'codifier')
+                              , ROW('303', 'codifier')
+                              , ROW('304', 'codifier')
+                              ] :: code_construction_input[]
+                      )
+             , add_subcodes_under_codifier(
+                        make_codekeyl_bystr('203')
+                      , '305'
+                      , VARIADIC ARRAY[ 
+                                ROW('305', 'codifier')
+                              , ROW('306', 'plain code')
+                              ] :: code_construction_input[]
+                      )
+             , add_subcodes_under_codifier(
+                        make_codekeyl_bystr('204')
+                      , '307'
+                      , VARIADIC ARRAY[ 
+                                ROW('307', 'codifier')
+                              , ROW('308', 'codifier')
+                              ] :: code_construction_input[]
+                      )
+             , add_subcodes_under_codifier(
+                        make_codekeyl_bystr('205')
+                      , '309'
+                      , VARIADIC ARRAY[ 
+                                ROW('309', 'codifier')
+                              , ROW('310', 'codifier')
+                              ] :: code_construction_input[]
+                      )
+             , add_subcodes_under_codifier(
+                        make_codekeyl_bystr('206')
+                      , '312'
+                      , VARIADIC ARRAY[ 
+                                ROW('311', 'codifier')
+                              , ROW('312', 'codifier')
+                              ] :: code_construction_input[]
+                      )
+             , add_subcodes_under_codifier(
+                        make_codekeyl_bystr('207')
+                      , '313'
+                      , VARIADIC ARRAY[ 
+                                ROW('313', 'codifier')
+                              , ROW('314', 'codifier')
+                              ] :: code_construction_input[]
+                      )
+             , add_subcodes_under_codifier(
+                        make_codekeyl_bystr('208')
+                      , '315'
+                      , VARIADIC ARRAY[ 
+                                ROW('315', 'codifier')
+                              , ROW('316', 'codifier')
+                              ] :: code_construction_input[]
+                      )
+             , add_subcodes_under_codifier(
+                        make_codekeyl_bystr('206')
+                      , '315'
+                      , VARIADIC ARRAY[ 
+                                ROW('306', 'codifier')
+                              ] :: code_construction_input[]
+                      )
+        INTO out_r; RAISE NOTICE 'Output(create_test_set): %', out_r;
+
+        SELECT new_code(ROW('306', 'plain code') :: code_construction_input
+                      , make_codekeyl_null()
+                      , FALSE
+                      ),
+               new_code(ROW('404', 'plain code') :: code_construction_input
+                      , make_codekeyl_bystr('306')
+                      , FALSE
+                      )
+        INTO out_r; RAISE NOTICE 'Output(create_test_set): %', out_r;
+
+        SELECT bind_code_to_codifier(
+                        make_acodekeyl_bystr('304')
+                      , make_acodekeyl_bystr('202')
+                      , FALSE
+                      )
+             , bind_code_to_codifier(
+                        make_acodekeyl_bystr('305')
+                      , make_acodekeyl_bystr('202')
+                      , FALSE
+                      )
+        INTO out_r; RAISE NOTICE 'Output(create_test_set): %', out_r;
+
+        SELECT new_code(ROW('401', 'plain code') :: code_construction_input
+                      , make_codekeyl_bystr('301')
+                      , FALSE
+                      )
+             , codifier_w_subcodes(
+                        make_codekeyl_bystr('307')
+                      , ROW('402', 'codifier') :: code_construction_input
+                      , '501'
+                      , VARIADIC ARRAY[ 
+                                ROW('501', 'plain code')
+                              ] :: code_construction_input[]
+                      )
+             , codifier_w_subcodes(
+                        make_codekeyl_bystr('311')
+                      , ROW('403', 'codifier') :: code_construction_input
+                      , '502'
+                      , VARIADIC ARRAY[ 
+                                ROW('502', 'plain code')
+                              , ROW('503', 'plain code')
+                              ] :: code_construction_input[]
+                      )
+        INTO out_r; RAISE NOTICE 'Output(create_test_set): %', out_r;
+
+        SELECT make_codifier_from_plaincode(TRUE, TRUE, make_codekeyl_bystr('test codifier'), 'codifier')
+        INTO out_r; RAISE NOTICE 'Output(create_test_set): %', out_r;
+
+        SELECT bind_code_to_codifier(
+                        make_acodekeyl_bystr('401')
+                      , make_acodekeyl_bystr('309')
+                      , FALSE
+                      )
+             , bind_code_to_codifier(
+                        make_acodekeyl_bystr('205')
+                      , make_acodekeyl_bystr('999')
+                      , FALSE
+                      )
+             , bind_code_to_codifier(
+                        make_acodekeyl_bystr2('403', '503')
+                      , make_acodekeyl_bystr('999')
+                      , FALSE
+                      )
+             , bind_code_to_codifier(
+                        make_acodekeyl_bystr2('208', '316')
+                      , make_acodekeyl_bystr('999')
+                      , FALSE
+                      )
+        INTO out_r; RAISE NOTICE 'Output(create_test_set): %', out_r;
+
+        --------
+
+        SELECT add_code_lng_names(
+                        TRUE
+                      , make_acodekeyl_bystr('101')
+                      , VARIADIC ARRAY[ 
+                                ROW('eng', 'code 101', 'Description od code 101.')
+                              , ROW('rus', 'код 101 ', 'Описание кода 101.')
+                              ] :: code_lngname_construction_input[]
+                      )
+             , add_code_lng_names(
+                        TRUE
+                      , make_acodekeyl_bystr('test codifier')
+                      , VARIADIC ARRAY[ 
+                                ROW('eng', 'test codifier (eng)', 'Description od code "test code".')
+                              , ROW('rus', 'тестовый кодификатор', 'Описание тестового кодификатора.')
+                              ] :: code_lngname_construction_input[]
+                      )
+             , add_code_lng_names(
+                        TRUE
+                      , make_acodekeyl_bystr('306')
+                      , VARIADIC ARRAY[ 
+                              , ROW('rus', 'код 306', 'Описание кодификатора 306.')
+                              ] :: code_lngname_construction_input[]
+                      )
+             , add_code_lng_names(
+                        TRUE
+                      , make_acodekeyl_bystr2('203', '306')
+                      , VARIADIC ARRAY[ 
+                              , ROW('rus', 'код 306', 'Описание кода 306.')
+                              ] :: code_lngname_construction_input[]
+                      )
+        INTO out_r; RAISE NOTICE 'Output(create_test_set): %', out_r;
+
+        RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+PERFORN create_test_set();
 
 SELECT * FROM codes;
 SELECT * FROM codes_tree;
 
------------
 
-SELECT make_codifier_from_plaincode(TRUE, (get_nonplaincode_by_codestr('test code 6')).code_id, 'metacodifier');
-SELECT bind_code_to_codifier((get_codified_view_by_codestr('test code 2', 'test code 6')).subcode_id, (get_nonplaincode_by_codestr('Root codifier')).code_id, TRUE);
-SELECT bind_code_to_codifier((get_nonplaincode_by_codestr('test codifier')).code_id, (get_codified_view_by_codestr('test code 2', 'test code 6')).subcode_id, TRUE);
 
-SELECT * FROM codes;
-SELECT * FROM codes_tree;
+\echo >>>>Testing "code_id_of" functions
 
-SELECT * FROM get_alldepths_subcodes_of_codifier((get_nonplaincode_by_codestr('test code 6')).code_id);
-SELECT * FROM get_alldepths_subcodes_of_codifier((get_nonplaincode_by_codestr('test codifier')).code_id);
+SELECT code_id_of_undefined()
+     , code_id_of_unclassified()
+     , code_id_of_error()
+     , code_id_of_ambiguous();
 
-SELECT * FROM get_codes_of_codifier_byid((get_nonplaincode_by_codestr('test code 2')).code_id);
-SELECT * FROM get_codes_of_codifier_bystr('test code 2');
-SELECT * FROM get_codifiers_of_code_byid((get_nonplaincode_by_codestr('test code 6')).code_id);
+SELECT 'undef              : ', code_id_of(TRUE , make_acodekeyl_null());
+SELECT 'c_id               : ', code_id_of(TRUE , make_acodekeyl_byid(110));
+SELECT 'c_nm (-l,-cf)      : ', code_id_of(TRUE , make_acodekeyl_bystr1('101'));
+SELECT 'c_nm (-l,+cf_id)   : ', code_id_of(TRUE , make_acodekeyl(make_codekey_null()                , make_codekey_byid(100)                    , make_codekey_bystr('101')));
+SELECT 'c_nm (-l,+cf_nm)   : ', code_id_of(TRUE , make_acodekeyl(make_codekey_null()                , make_codekey_bystr('test codifier')       , make_codekey_bystr('101')));
+SELECT 'c_nm (+l_id,-cf)   : ', code_id_of(TRUE , make_acodekeyl(make_codekey_byid(9001)            , make_codekey_null()                       , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_id,+cf_id): ', code_id_of(TRUE , make_acodekeyl(make_codekey_byid(9001)            , make_codekey_byid(100)                    , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_id,+cf_nm): ', code_id_of(TRUE , make_acodekeyl(make_codekey_byid(9001)            , make_codekey_bystr('test codifier')       , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,-cf)   : ', code_id_of(TRUE , make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_null()                       , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,+cf_id): ', code_id_of(TRUE , make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_byid(100)                    , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,+cf_nm): ', code_id_of(TRUE , make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_bystr('тестовый кодификатор'), make_codekey_bystr('код 101')));
+SELECT 'cf_id              : ', code_id_of(TRUE , make_acodekeyl(make_codekey_null()                , make_codekey_byid(100)                    , make_codekey_null()          ));
+SELECT 'cf_nm (-l)         : ', code_id_of(TRUE , make_acodekeyl(make_codekey_null()                , make_codekey_bystr('test codifier')       , make_codekey_null()          ));
+SELECT 'cf_nm (+l_id)      : ', code_id_of(TRUE , make_acodekeyl(make_codekey_byid(9001)            , make_codekey_bystr('тестовый кодификатор'), make_codekey_null()          ));
+SELECT 'cf_nm (+l_nm)      : ', code_id_of(TRUE , make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_bystr('тестовый кодификатор'), make_codekey_null()          ));
 
-\echo ---Tester: following command should rise an error.---
-SELECT make_codifier_from_plaincode(TRUE, (get_codified_view_by_codestr('test code 2', 'test code 3')).subcode_id, 'codifier');
+SELECT 'undef              : ', code_id_of(FALSE, make_acodekeyl_null());
+SELECT 'c_id               : ', code_id_of(FALSE, make_acodekeyl_byid(110));
+SELECT 'c_nm (-l,-cf)      : ', code_id_of(FALSE, make_acodekeyl_bystr1('101'));
+SELECT 'c_nm (-l,+cf_id)   : ', code_id_of(FALSE, make_acodekeyl(make_codekey_null()                , make_codekey_byid(100)                    , make_codekey_bystr('101')));
+SELECT 'c_nm (-l,+cf_nm)   : ', code_id_of(FALSE, make_acodekeyl(make_codekey_null()                , make_codekey_bystr('test codifier')       , make_codekey_bystr('101')));
+SELECT 'c_nm (+l_id,-cf)   : ', code_id_of(FALSE, make_acodekeyl(make_codekey_byid(9001)            , make_codekey_null()                       , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_id,+cf_id): ', code_id_of(FALSE, make_acodekeyl(make_codekey_byid(9001)            , make_codekey_byid(100)                    , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_id,+cf_nm): ', code_id_of(FALSE, make_acodekeyl(make_codekey_byid(9001)            , make_codekey_bystr('test codifier')       , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,-cf)   : ', code_id_of(FALSE, make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_null()                       , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,+cf_id): ', code_id_of(FALSE, make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_byid(100)                    , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,+cf_nm): ', code_id_of(FALSE, make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_bystr('тестовый кодификатор'), make_codekey_bystr('код 101')));
+SELECT 'cf_id              : ', code_id_of(FALSE, make_acodekeyl(make_codekey_null()                , make_codekey_byid(100)                    , make_codekey_null()          ));
+SELECT 'cf_nm (-l)         : ', code_id_of(FALSE, make_acodekeyl(make_codekey_null()                , make_codekey_bystr('test codifier')       , make_codekey_null()          ));
+SELECT 'cf_nm (+l_id)      : ', code_id_of(FALSE, make_acodekeyl(make_codekey_byid(9001)            , make_codekey_bystr('тестовый кодификатор'), make_codekey_null()          ));
+SELECT 'cf_nm (+l_nm)      : ', code_id_of(FALSE, make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_bystr('тестовый кодификатор'), make_codekey_null()          ));
 
-\echo ---Tester: following command should rise an error.---
-SELECT add_subcodes_under_codifier_byid(
-                (get_nonplaincode_by_codestr('test code 3')).code_id
-              , 'test code 3.3' :: varchar
-              , VARIADIC ARRAY[ ROW('test code 3.0', 'plain code')
-                              , ROW('test code 3.100', 'plain code')
-                              , ROW('test code 3.300', 'plain code')
-                              ] :: code_construction_input[]
-              );
-SELECT add_subcodes_under_codifier_byid(
-                (get_nonplaincode_by_codestr('test code 3')).code_id
-              , 'test code 3.3' :: varchar
-              , VARIADIC ARRAY[ ROW('test code 3.1', 'plain code')
-                              , ROW('test code 3.2', 'plain code')
-                              , ROW('test code 3.3', 'plain code')
-                              ] :: code_construction_input[]
-              );
-\echo ---Tester: following command should rise an error.---
-SELECT add_subcodes_under_codifier_bystr(
-                'test code 3'   :: varchar
-              , NULL            :: varchar
-              , VARIADIC ARRAY[ ROW('test code 3.3', 'plain code')
-                              , ROW('test code 3.4', 'plain code')
-                              , ROW('test code 3.5', 'plain code')
-                              ] :: code_construction_input[]
-              );
-\echo ---Tester: following command should rise an error.---
-SELECT add_subcodes_under_codifier_bystr(
-                'test code 3'   :: varchar
-              , 'test code 3.4' :: varchar
-              , VARIADIC ARRAY[ ROW('test code 3.4', 'plain code')
-                              , ROW('test code 3.5', 'plain code')
-                              ] :: code_construction_input[]
-              );
-SELECT add_subcodes_under_codifier_bystr(
-                'test code 3'   :: varchar
-              , NULL            :: varchar
-              , VARIADIC ARRAY[ ROW('test code 3.6', 'codifier')
-                              , ROW('test code 3.7', 'plain code')
-                              ] :: code_construction_input[]
-              );
-\echo ---Tester: following command should rise an error.---
-SELECT add_subcodes_under_codifier_bystr(
-                'test code 100' :: varchar
-              , NULL            :: varchar
-              , VARIADIC ARRAY[ ROW('test code 3.6', 'codifier')
-                              , ROW('test code 3.7', 'plain code')
-                              ] :: code_construction_input[]
-              );
+SELECT 'c_id               : ', code_id_of(TRUE , make_acodekeyl_byid(-1));
+SELECT 'c_nm (-l,-cf)      : ', code_id_of(TRUE , make_acodekeyl_bystr1('-1'));
+SELECT 'c_nm (-l,+cf_id)   : ', code_id_of(TRUE , make_acodekeyl(make_codekey_null()      , make_codekey_byid(-1)   , make_codekey_bystr('-1')));
+SELECT 'c_nm (-l,+cf_nm)   : ', code_id_of(TRUE , make_acodekeyl(make_codekey_null()      , make_codekey_bystr('-1'), make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_id,-cf)   : ', code_id_of(TRUE , make_acodekeyl(make_codekey_byid(9001)  , make_codekey_null()     , make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_id,+cf_id): ', code_id_of(TRUE , make_acodekeyl(make_codekey_byid(9001)  , make_codekey_byid(-1)   , make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_id,+cf_nm): ', code_id_of(TRUE , make_acodekeyl(make_codekey_byid(9001)  , make_codekey_bystr('-1'), make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_nm,-cf)   : ', code_id_of(TRUE , make_acodekeyl(make_codekey_bystr('rus'), make_codekey_null()     , make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_nm,+cf_id): ', code_id_of(TRUE , make_acodekeyl(make_codekey_bystr('rus'), make_codekey_byid(-1)   , make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_nm,+cf_nm): ', code_id_of(TRUE , make_acodekeyl(make_codekey_bystr('rus'), make_codekey_bystr('-1'), make_codekey_bystr('-1')));
+SELECT 'cf_id              : ', code_id_of(TRUE , make_acodekeyl(make_codekey_null()      , make_codekey_byid(-1)   , make_codekey_null()     ));
+SELECT 'cf_nm (-l)         : ', code_id_of(TRUE , make_acodekeyl(make_codekey_null()      , make_codekey_bystr('-1'), make_codekey_null()     ));
+SELECT 'cf_nm (+l_id)      : ', code_id_of(TRUE , make_acodekeyl(make_codekey_byid(9001)  , make_codekey_bystr('-1'), make_codekey_null()     ));
+SELECT 'cf_nm (+l_nm)      : ', code_id_of(TRUE , make_acodekeyl(make_codekey_bystr('rus'), make_codekey_bystr('-1'), make_codekey_null()     ));
 
-\echo ---Tester: following command should rise an error.---
-SELECT new_codifier(ROW('test code 3.6', 'codifier'), (get_nonplaincode_by_codestr('test code 2')).code_id);
+\echo >>>>These shoulde raise exceptions:
+SELECT 'c_id               : ', code_id_of(FALSE, make_acodekeyl_byid(-1));
+SELECT 'c_nm (-l,-cf)      : ', code_id_of(FALSE, make_acodekeyl_bystr1('-1'));
+SELECT 'c_nm (-l,+cf_id)   : ', code_id_of(FALSE, make_acodekeyl(make_codekey_null()      , make_codekey_byid(-1)   , make_codekey_bystr('-1')));
+SELECT 'c_nm (-l,+cf_nm)   : ', code_id_of(FALSE, make_acodekeyl(make_codekey_null()      , make_codekey_bystr('-1'), make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_id,-cf)   : ', code_id_of(FALSE, make_acodekeyl(make_codekey_byid(9001)  , make_codekey_null()     , make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_id,+cf_id): ', code_id_of(FALSE, make_acodekeyl(make_codekey_byid(9001)  , make_codekey_byid(-1)   , make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_id,+cf_nm): ', code_id_of(FALSE, make_acodekeyl(make_codekey_byid(9001)  , make_codekey_bystr('-1'), make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_nm,-cf)   : ', code_id_of(FALSE, make_acodekeyl(make_codekey_bystr('rus'), make_codekey_null()     , make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_nm,+cf_id): ', code_id_of(FALSE, make_acodekeyl(make_codekey_bystr('rus'), make_codekey_byid(-1)   , make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_nm,+cf_nm): ', code_id_of(FALSE, make_acodekeyl(make_codekey_bystr('rus'), make_codekey_bystr('-1'), make_codekey_bystr('-1')));
+SELECT 'cf_id              : ', code_id_of(FALSE, make_acodekeyl(make_codekey_null()      , make_codekey_byid(-1)   , make_codekey_null()     ));
+SELECT 'cf_nm (-l)         : ', code_id_of(FALSE, make_acodekeyl(make_codekey_null()      , make_codekey_bystr('-1'), make_codekey_null()     ));
+SELECT 'cf_nm (+l_id)      : ', code_id_of(FALSE, make_acodekeyl(make_codekey_byid(9001)  , make_codekey_bystr('-1'), make_codekey_null()     ));
+SELECT 'cf_nm (+l_nm)      : ', code_id_of(FALSE, make_acodekeyl(make_codekey_bystr('rus'), make_codekey_bystr('-1'), make_codekey_null()     ));
 
-\echo ---Tester: following command should rise an error.---
-SELECT new_codifier_w_subcodes(
-                'test code 3.6' :: varchar
-              , ROW('test code 3.6.1', 'plain code') :: code_construction_input
-              , NULL            :: varchar
-              , VARIADIC ARRAY[ ROW('test code 3.6.1.1', 'plain code')
-                              , ROW('test code 3.6.1.1', 'plain code')
-                              ] :: code_construction_input[]
-              );
-SELECT new_codifier_w_subcodes(
-                'test code 3.6' :: varchar
-              , ROW('test code 3.6.1', 'codifier') :: code_construction_input
-              , NULL            :: varchar
-              , VARIADIC ARRAY[ ROW('test code 3.6.1.1', 'plain code')
-                              , ROW('test code 3.6.1.2', 'plain code')
-                              ] :: code_construction_input[]
-              );
+\echo >>>>"code_id_of" functions tested
 
-SELECT * FROM codes;
-SELECT * FROM codes_tree;
+\echo >>>>Testing "code_belongs_to_codifier" function
 
-SELECT make_codifier_from_plaincode_w_values(
-          FALSE
-        , (get_codified_view_by_codestr('test code 3', 'test code 3.3')).subcode_id
-        , 'statuses-set'    :: code_type
-        , 'test code 3.3.d' :: varchar
-        , VARIADIC ARRAY[ ROW('test code 3.3.d', 'plain code')
-                        , ROW('test code 3.3.a', 'plain code')
-                        ]   :: code_construction_input[]
+\echo >>> trues
+SELECT 'undef              : ', code_belongs_to_codifier(make_acodekeyl_null());
+SELECT 'c_id               : ', code_belongs_to_codifier(make_acodekeyl_byid(110));
+SELECT 'c_nm (-l,-cf)      : ', code_belongs_to_codifier(make_acodekeyl_bystr1('101'));
+SELECT 'c_nm (-l,+cf_id)   : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_null()                , make_codekey_byid(100)                    , make_codekey_bystr('101')));
+SELECT 'c_nm (-l,+cf_nm)   : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_null()                , make_codekey_bystr('test codifier')       , make_codekey_bystr('101')));
+SELECT 'c_nm (+l_id,-cf)   : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_byid(9001)            , make_codekey_null()                       , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_id,+cf_id): ', code_belongs_to_codifier(make_acodekeyl(make_codekey_byid(9001)            , make_codekey_byid(100)                    , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_id,+cf_nm): ', code_belongs_to_codifier(make_acodekeyl(make_codekey_byid(9001)            , make_codekey_bystr('test codifier')       , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,-cf)   : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_null()                       , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,+cf_id): ', code_belongs_to_codifier(make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_byid(100)                    , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,+cf_nm): ', code_belongs_to_codifier(make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_bystr('тестовый кодификатор'), make_codekey_bystr('код 101')));
+SELECT 'cf_id              : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_null()                , make_codekey_byid(100)                    , make_codekey_null()          ));
+SELECT 'cf_nm (-l)         : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_null()                , make_codekey_bystr('test codifier')       , make_codekey_null()          ));
+SELECT 'cf_nm (+l_id)      : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_byid(9001)            , make_codekey_bystr('тестовый кодификатор'), make_codekey_null()          ));
+SELECT 'cf_nm (+l_nm)      : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_bystr('тестовый кодификатор'), make_codekey_null()          ));
+
+\echo >>> falses
+SELECT 'undef              : ', code_belongs_to_codifier(make_acodekeyl_null());
+SELECT 'c_id               : ', code_belongs_to_codifier(make_acodekeyl_byid(110));
+SELECT 'c_nm (-l,-cf)      : ', code_belongs_to_codifier(make_acodekeyl_bystr1('101'));
+SELECT 'c_nm (-l,+cf_id)   : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_null()                , make_codekey_byid(100)                    , make_codekey_bystr('test codifier')));
+SELECT 'c_nm (-l,+cf_nm)   : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_null()                , make_codekey_bystr('test codifier')       , make_codekey_bystr('test codifier')));
+SELECT 'c_nm (+l_id,-cf)   : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_byid(9001)            , make_codekey_null()                       , make_codekey_bystr('тестовый кодификатор')));
+SELECT 'c_nm (+l_id,+cf_id): ', code_belongs_to_codifier(make_acodekeyl(make_codekey_byid(9001)            , make_codekey_byid(100)                    , make_codekey_bystr('тестовый кодификатор')));
+SELECT 'c_nm (+l_id,+cf_nm): ', code_belongs_to_codifier(make_acodekeyl(make_codekey_byid(9001)            , make_codekey_bystr('test codifier')       , make_codekey_bystr('тестовый кодификатор')));
+SELECT 'c_nm (+l_nm,-cf)   : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_null()                       , make_codekey_bystr('тестовый кодификатор')));
+SELECT 'c_nm (+l_nm,+cf_id): ', code_belongs_to_codifier(make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_byid(100)                    , make_codekey_bystr('тестовый кодификатор')));
+SELECT 'c_nm (+l_nm,+cf_nm): ', code_belongs_to_codifier(make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_bystr('тестовый кодификатор'), make_codekey_bystr('тестовый кодификатор')));
+SELECT 'cf_id              : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_null()                , make_codekey_byid(100)                    , make_codekey_null()          ));
+SELECT 'cf_nm (-l)         : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_null()                , make_codekey_bystr('test codifier')       , make_codekey_null()          ));
+SELECT 'cf_nm (+l_id)      : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_byid(9001)            , make_codekey_bystr('тестовый кодификатор'), make_codekey_null()          ));
+SELECT 'cf_nm (+l_nm)      : ', code_belongs_to_codifier(make_acodekeyl(make_codekey_bystr('rus')          , make_codekey_bystr('тестовый кодификатор'), make_codekey_null()          ));
+
+\echo >>>>"code_belongs_to_codifier" functions tested
+
+\echo >>>>Testing "codifier_default_code" function
+
+\echo >>> 120
+SELECT 'undef           : ', codifier_default_code(TRUE, make_codekeyl_null());
+SELECT 'c_id            : ', codifier_default_code(TRUE, make_codekeyl_byid(110));
+SELECT 'c_nm (-l,-cf)   : ', codifier_default_code(TRUE, make_codekeyl_bystr('101'));
+SELECT 'c_nm (+l_id,-cf): ', codifier_default_code(TRUE, make_codekeyl_bystrl(make_codekey_byid(9001)  , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,-cf): ', codifier_default_code(TRUE, make_codekeyl_bystrl(make_codekey_bystr('rus'), make_codekey_bystr('код 101')));
+
+\echo >>> 120
+SELECT 'undef           : ', codifier_default_code(FALSE, make_codekeyl_null());
+SELECT 'c_id            : ', codifier_default_code(FALSE, make_codekeyl_byid(110));
+SELECT 'c_nm (-l,-cf)   : ', codifier_default_code(FALSE, make_codekeyl_bystr('101'));
+SELECT 'c_nm (+l_id,-cf): ', codifier_default_code(FALSE, make_codekeyl_bystrl(make_codekey_byid(9001)  , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,-cf): ', codifier_default_code(FALSE, make_codekeyl_bystrl(make_codekey_bystr('rus'), make_codekey_bystr('код 101')));
+
+\echo >>> not found
+SELECT 'undef           : ', codifier_default_code(TRUE, make_codekeyl_null());
+SELECT 'c_id            : ', codifier_default_code(TRUE, make_codekeyl_byid(-1));
+SELECT 'c_nm (-l,-cf)   : ', codifier_default_code(TRUE, make_codekeyl_bystr('-1'));
+SELECT 'c_nm (+l_id,-cf): ', codifier_default_code(TRUE, make_codekeyl_bystrl(make_codekey_byid(9001)  , make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_nm,-cf): ', codifier_default_code(TRUE, make_codekeyl_bystrl(make_codekey_bystr('rus'), make_codekey_bystr('-1')));
+
+\echo >>> not found
+\echo >>> These shoulde raise exceptions:
+SELECT 'undef           : ', codifier_default_code(FALSE, make_codekeyl_null());
+SELECT 'c_id            : ', codifier_default_code(FALSE, make_codekeyl_byid(-1));
+SELECT 'c_nm (-l,-cf)   : ', codifier_default_code(FALSE, make_codekeyl_bystr('-1'));
+SELECT 'c_nm (+l_id,-cf): ', codifier_default_code(FALSE, make_codekeyl_bystrl(make_codekey_byid(9001)  , make_codekey_bystr('-1')));
+SELECT 'c_nm (+l_nm,-cf): ', codifier_default_code(FALSE, make_codekeyl_bystrl(make_codekey_bystr('rus'), make_codekey_bystr('-1')));
+
+\echo >>>>"codifier_default_code" functions tested
+
+\echo >>>>Testing "get_code" function
+
+\echo >>> found
+SELECT 'undef              : ', get_code(TRUE, make_acodekeyl_null());
+SELECT 'c_id               : ', get_code(TRUE, make_acodekeyl_byid(110));
+SELECT 'c_nm (-l,-cf)      : ', get_code(TRUE, make_acodekeyl_bystr1('101'));
+SELECT 'c_nm (-l,+cf_id)   : ', get_code(TRUE, make_acodekeyl(make_codekey_null()      , make_codekey_byid(100)                    , make_codekey_bystr('101')));
+SELECT 'c_nm (-l,+cf_nm)   : ', get_code(TRUE, make_acodekeyl(make_codekey_null()      , make_codekey_bystr('test codifier')       , make_codekey_bystr('101')));
+SELECT 'c_nm (+l_id,-cf)   : ', get_code(TRUE, make_acodekeyl(make_codekey_byid(9001)  , make_codekey_null()                       , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_id,+cf_id): ', get_code(TRUE, make_acodekeyl(make_codekey_byid(9001)  , make_codekey_byid(100)                    , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_id,+cf_nm): ', get_code(TRUE, make_acodekeyl(make_codekey_byid(9001)  , make_codekey_bystr('test codifier')       , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,-cf)   : ', get_code(TRUE, make_acodekeyl(make_codekey_bystr('rus'), make_codekey_null()                       , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,+cf_id): ', get_code(TRUE, make_acodekeyl(make_codekey_bystr('rus'), make_codekey_byid(100)                    , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,+cf_nm): ', get_code(TRUE, make_acodekeyl(make_codekey_bystr('rus'), make_codekey_bystr('тестовый кодификатор'), make_codekey_bystr('код 101')));
+SELECT 'cf_id              : ', get_code(TRUE, make_acodekeyl(make_codekey_null()      , make_codekey_byid(100)                    , make_codekey_null()          ));
+SELECT 'cf_nm (-l)         : ', get_code(TRUE, make_acodekeyl(make_codekey_null()      , make_codekey_bystr('test codifier')       , make_codekey_null()          ));
+SELECT 'cf_nm (+l_id)      : ', get_code(TRUE, make_acodekeyl(make_codekey_byid(9001)  , make_codekey_bystr('тестовый кодификатор'), make_codekey_null()          ));
+SELECT 'cf_nm (+l_nm)      : ', get_code(TRUE, make_acodekeyl(make_codekey_bystr('rus'), make_codekey_bystr('тестовый кодификатор'), make_codekey_null()          ));
+
+\echo >>> not found
+SELECT 'undef              : ', get_code(FALSE, make_acodekeyl_null());
+SELECT 'c_id               : ', get_code(FALSE, make_acodekeyl_byid(-1));
+SELECT 'c_nm (-l,-cf)      : ', get_code(FALSE, make_acodekeyl_bystr1('-1'));
+SELECT 'c_nm (-l,+cf_id)   : ', get_code(FALSE, make_acodekeyl(make_codekey_null()      , make_codekey_byid(-1)   , make_codekey_bystr('101')    ));
+SELECT 'c_nm (-l,+cf_nm)   : ', get_code(FALSE, make_acodekeyl(make_codekey_null()      , make_codekey_bystr('-1'), make_codekey_bystr('101')    ));
+SELECT 'c_nm (+l_id,-cf)   : ', get_code(FALSE, make_acodekeyl(make_codekey_byid(9001)  , make_codekey_null()     , make_codekey_bystr('-1')     ));
+SELECT 'c_nm (+l_id,+cf_id): ', get_code(FALSE, make_acodekeyl(make_codekey_byid(9001)  , make_codekey_byid(-1)   , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_id,+cf_nm): ', get_code(FALSE, make_acodekeyl(make_codekey_byid(9001)  , make_codekey_bystr('-1'), make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,-cf)   : ', get_code(FALSE, make_acodekeyl(make_codekey_bystr('rus'), make_codekey_null()     , make_codekey_bystr('-1')     ));
+SELECT 'c_nm (+l_nm,+cf_id): ', get_code(FALSE, make_acodekeyl(make_codekey_bystr('rus'), make_codekey_byid(-1)   , make_codekey_bystr('код 101')));
+SELECT 'c_nm (+l_nm,+cf_nm): ', get_code(FALSE, make_acodekeyl(make_codekey_bystr('rus'), make_codekey_bystr('-1'), make_codekey_bystr('код 101')));
+SELECT 'cf_id              : ', get_code(FALSE, make_acodekeyl(make_codekey_null()      , make_codekey_byid(-1)   , make_codekey_null()          ));
+SELECT 'cf_nm (-l)         : ', get_code(FALSE, make_acodekeyl(make_codekey_null()      , make_codekey_bystr('-1'), make_codekey_null()          ));
+SELECT 'cf_nm (+l_id)      : ', get_code(FALSE, make_acodekeyl(make_codekey_byid(9001)  , make_codekey_bystr('-1'), make_codekey_null()          ));
+SELECT 'cf_nm (+l_nm)      : ', get_code(FALSE, make_acodekeyl(make_codekey_bystr('rus'), make_codekey_bystr('-1'), make_codekey_null()          ));
+
+\echo >>>>"get_code" functions tested
+
+\echo >>>>Testing "get_codes_l" function
+
+SELECT 'undef           : ', a.* FROM get_codes_l(make_codekeyl_null()) AS a;
+SELECT 'c_id            : ', a.* FROM get_codes_l(make_codekeyl_byid(360)) AS a;
+SELECT 'c_nm (-l,-cf)   : ', a.* FROM get_codes_l(make_codekeyl_bystr('306')) AS a;
+SELECT 'c_nm (+l_id,-cf): ', a.* FROM get_codes_l(make_codekeyl_bystrl(make_codekey_byid(9001)  , make_codekey_bystr('код 306'))) AS a;
+SELECT 'c_nm (+l_nm,-cf): ', a.* FROM get_codes_l(make_codekeyl_bystrl(make_codekey_bystr('rus'), make_codekey_bystr('код 306'))) AS a;
+
+
+\echo >>>>"get_codes_l" functions tested
+
+
+\echo >>>>Testing "get_nonplaincode_by_str" function
+
+SELECT get_nonplaincode_by_str('306');
+SELECT get_nonplaincode_by_str('-1');
+
+\echo >>>>"get_nonplaincode_by_str" functions tested
+
+\echo >>>>Testing "get_code_by_str" function
+
+SELECT get_code_by_str('203', '306');
+SELECT get_code_by_str('-1', '306');
+SELECT get_code_by_str('203', '-1');
+
+\echo >>>>"get_code_by_str" functions tested
+
+
+\echo >>>>Testing "get_codes_of_codifier" function
+
+SELECT get_codes_of_codifier(make_acodekeyl_bystr1('101'));
+SELECT get_codes_of_codifier(make_acodekeyl_bystr2('203', '306'));
+SELECT get_codes_of_codifier(make_acodekeyl_null());
+
+\echo >>>>"get_codes_of_codifier" functions tested
+
+\echo >>>>Testing "get_codifiers_of_code" function
+
+SELECT get_codifiers_of_code(make_acodekeyl_bystr2('309', '401'));
+SELECT get_codifiers_of_code(make_acodekeyl_bystr2('309', '309'));
+SELECT get_codifiers_of_code(make_acodekeyl_null());
+
+\echo >>>>"get_codifiers_of_code" functions tested
+
+\echo >>>>Testing "find_subcodes" function
+
+SELECT find_subcodes(TRUE, make_acodekeyl_bystr1('101'), FALSE);
+SELECT find_subcodes(TRUE, make_acodekeyl_bystr1('101'), TRUE);
+SELECT find_subcodes(FALSE, make_acodekeyl_bystr1('101'), FALSE);
+SELECT find_subcodes(FALSE, make_acodekeyl_bystr1('101'), TRUE);
+
+SELECT find_subcodes(FALSE, make_acodekeyl_bystr2('403', '502'), TRUE);
+
+SELECT find_subcodes(TRUE, make_acodekeyl_bystr1('-1'), FALSE);
+SELECT find_subcodes(TRUE, make_acodekeyl_bystr1('-1'), TRUE);
+SELECT find_subcodes(FALSE, make_acodekeyl_bystr1('-1'), FALSE);
+SELECT find_subcodes(FALSE, make_acodekeyl_bystr1('-1'), TRUE);
+
+\echo >>>>"find_subcodes" functions tested
+
+\echo >>>>Testing triggers
+
+\echo >>> These shoulde raise exceptions:
+SELECT new_code(
+          ROW('201', 'plain code') :: code_construction_input
+        , make_codekeyl_bystr('101')
+        , FALSE
         );
-
-SELECT new_code(ROW('test code 3.3.d', 'plain code'), (get_nonplaincode_by_codestr('test code 2')).code_id );
-\echo ---Tester: following command should rise an error.---
-SELECT bind_code_to_codifier((get_codified_view_by_codestr('test code 2', 'test code 3.3.d')).subcode_id, (get_nonplaincode_by_codestr('test code 3.3')).code_id, FALSE);
-
-SELECT new_code(ROW('test code 3.3.c', 'plain code'), (get_nonplaincode_by_codestr('test code 2')).code_id );
-\echo ---Tester: following command should rise an error.---
-SELECT bind_code_to_codifier((get_codified_view_by_codestr('test code 2', 'test code 3.3.c')).subcode_id, (get_nonplaincode_by_codestr('test code 3.3')).code_id, TRUE);
-
-SELECT codifier_default_code_byid(FALSE, (get_nonplaincode_by_codestr('test code 3.3')).code_id);
-SELECT codifier_default_code_bystr(TRUE, 'test code 3.3');
-
-SELECT * FROM codes;
-SELECT * FROM codes_tree;
-
-SELECT remove_code_byid((get_codified_view_by_codestr('test code 2', 'test code 3.3.c')).subcode_id);
-\echo ---Tester: following command should rise an error.---
-SELECT remove_code_bystr(FALSE, 'test code 2', 'test code 3.3.c');
-SELECT remove_code_bystr(FALSE, 'test code 3.3', 'test code 3.3.d');
-
-SELECT codifier_default_code_byid(TRUE, (get_nonplaincode_by_codestr('test code 3.3')).code_id);
-SELECT codifier_default_code_bystr(FALSE, 'test code 3.3');
-
-SELECT add_subcodes_under_codifier_byid(
-                (get_nonplaincode_by_codestr('test code 3.3')).code_id
-              , 'test code 3.3.g' :: varchar
-              , VARIADIC ARRAY[ ROW('test code 3.3.g', 'plain code')
-                              , ROW('test code 3.3.e', 'plain code')
-                              ] :: code_construction_input[]
-              );
-SELECT codifier_default_code_bystr(FALSE, 'test code 3.3');
-SELECT codifier_default_code_byid(FALSE, (get_nonplaincode_by_codestr('test code 3.3')).code_id);
-
+SELECT new_code(
+          ROW('501', 'plain code') :: code_construction_input
+        , make_codekeyl_bystr('402')
+        , FALSE
+        );
+SELECT new_code(
+          ROW('210', 'plain code') :: code_construction_input
+        , make_codekeyl_bystr('101')
+        , TRUE
+        );
+SELECT add_subcodes_under_codifier(
+          make_codekeyl_bystr('501')
+        , '601'
+        , VARIADIC ARRAY[ 
+                  ROW('601', 'codifier')
+                , ROW('602', 'codifier')
+                ] :: code_construction_input[]
+        );
 SELECT make_codifier_from_plaincode_w_values(
           TRUE
-        , (get_codified_view_by_codestr('test code 3.3', 'test code 3.3.g')).subcode_id
-        , 'statuses-set'      :: code_type
-        , 'test code 3.3.g.1' :: varchar
-        , VARIADIC ARRAY[ ROW('test code 3.3.g.1', 'plain code')
-                        , ROW('test code 3.3.g.2', 'plain code')
-                        ]     :: code_construction_input[]
+        , TRUE
+        , make_codekeyl_bystr('501')
+        , 'codifier'
+        , '602'
+        , VARIADIC ARRAY[ 
+                  ROW('601', 'codifier')
+                , ROW('603', 'codifier')
+                ] :: code_construction_input[]
+        );
+SELECT add_code_lng_names(
+          TRUE
+        , make_acodekeyl_bystr2('304')
+        , VARIADIC ARRAY[ 
+                , ROW('rus', 'код 306', 'Описание кодификатора 306.')
+                , ROW('end', 'code 304', 'Description of 304.')
+                ] :: code_lngname_construction_input[]
+        );
+SELECT add_code_lng_names(
+          TRUE
+        , make_acodekeyl_bystr2('303')
+        , VARIADIC ARRAY[ 
+                , ROW('rus', 'код 306', 'Описание кодификатора 306.')
+                , ROW('end', 'code 304', 'Description of 304.')
+                ] :: code_lngname_construction_input[]
+        );
+SELECT add_code_lng_names(
+          TRUE
+        , make_acodekeyl_bystr2('305')
+        , VARIADIC ARRAY[ 
+                , ROW('rus', 'код 306', 'Описание кодификатора 306.')
+                , ROW('end', 'code 304', 'Description of 304.')
+                ] :: code_lngname_construction_input[]
         );
 
-SELECT bind_code_to_codifier((get_nonplaincode_by_codestr('test code 3.3')).code_id, (get_nonplaincode_by_codestr('test code 3.3.g')).code_id, FALSE);
-SELECT unbind_code_from_codifier(TRUE, (get_nonplaincode_by_codestr('test code 3.3')).code_id, (get_nonplaincode_by_codestr('test code 3.3.g')).code_id);
-\echo ---Tester: following command should rise an error.---
-SELECT unbind_code_from_codifier(TRUE, (get_nonplaincode_by_codestr('test code 3.3')).code_id, (get_nonplaincode_by_codestr('test code 3.3.g')).code_id);
-SELECT bind_code_to_codifier((get_nonplaincode_by_codestr('test code 3.3')).code_id, (get_nonplaincode_by_codestr('test code 3.3.g')).code_id, FALSE);
+\echo >>>>Triggers tested
+
+SELECT remove_code(TRUE, make_acodekeyl_bystr('999'), TRUE);
+SELECT find_subcodes(TRUE, make_acodekeyl_bystr1('101'), FALSE);
 
 SELECT * FROM codes;
 SELECT * FROM codes_tree;
 
-SELECT * FROM get_alldepths_subcodes_of_codifier((get_nonplaincode_by_codestr('test code 3')).code_id);
+PERFORM remove_test_set();
 
+\echo =======Administration and lookup functions tested============
 
-\echo ---Tester: following command should rise an error.---
-SELECT remove_subcodes_by_codifierid((get_nonplaincode_by_codestr('test code 3')).code_id, FALSE, FALSE);
+\echo =======Cleaning up after testing=============================
 
-SELECT remove_subcodes_by_codifierid((get_nonplaincode_by_codestr('test code 3')).code_id, TRUE, FALSE);
-SELECT bind_code_to_codifier((get_codified_view_by_codestr('test code 2', 'test code 3.3.d')).subcode_id, (get_nonplaincode_by_codestr('test code 3')).code_id, TRUE);
+DROP FUNCTION remove_test_set();
+DROP FUNCTION create_test_set();
 
-\echo ---Tester: following command should rise an error.---
-SELECT remove_code_bystr(FALSE, 'test code 2', 'test code 3.3.dz');
-SELECT remove_code_bystr(TRUE, 'test code 2', 'test code 3.3.dz');
-SELECT remove_code_bystr(FALSE, 'test code 2', 'test code 3.3.d');
-
-SELECT remove_codifier_w_subcodes_byid((get_nonplaincode_by_codestr('test codifier')).code_id, TRUE, TRUE);
-
---------
-
-ALTER SEQUENCE codifiers_ids_seq RESTART WITH 100;
+ALTER SEQUENCE   codifiers_ids_seq RESTART WITH 100;
 ALTER SEQUENCE plain_codes_ids_seq RESTART WITH 10000;
 
 SELECT * FROM codes;
 SELECT * FROM codes_tree;
+
+\echo =======Clean up after testing finished=======================
+

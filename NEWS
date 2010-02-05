@@ -14,3 +14,18 @@ Changes from 0.1 to 0.2
 Changes from 0.2 to 0.3
 --------------------------------------------
 * New version of STANDARD (0.3)
+
+
+Changes from 0.3 to 0.4
+--------------------------------------------
+* Completely remade API.
+* Added power to names of codes in different languages. Now they obey 
+  uniqueness rules (same as codes.code_text does) in scopes of languages. 
+* Code is now addressable by 4 types of keys:
+   -- Simple code key               - not always enough to identify plain code
+   -- Codified code key             - identify any code
+   -- Simple code key by language   - extension of simple code key
+   -- Codified code key by language - extension of codified code key 
+* No more dependency from Language. Now the package codifies languages itself.
+  Language package consumed. Future versions of packages, 
+  that required Language will now require Codifier.
