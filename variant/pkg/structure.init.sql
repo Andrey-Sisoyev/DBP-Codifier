@@ -25,7 +25,7 @@ CREATE TYPE code_type AS ENUM ('metacodifier', 'codifier', 'statuses-set', 'comp
 -- one hunded sch_<<$app_name$>>.codes reserved for the most fundamental codifiers roots
 CREATE SEQUENCE codifiers_ids_seq -- WARNIG!!! Some alterations are in the data.sql
         INCREMENT BY 10
-        MINVALUE 0
+        MINVALUE 100
         START WITH 100
         NO CYCLE;
 
