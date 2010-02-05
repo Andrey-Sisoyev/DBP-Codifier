@@ -66,6 +66,7 @@ DROP FUNCTION IF EXISTS get_nonplaincode_by_codestr(par_codifier varchar)       
 DROP FUNCTION IF EXISTS get_codified_view_by_codestr(par_codifier varchar, par_code varchar)                 ;
 DROP FUNCTION IF EXISTS codifier_default_code_byid(par_if_exists boolean, par_cf_id integer)                 ;
 DROP FUNCTION IF EXISTS codifier_default_code_bystr(par_if_exists boolean, par_cf_name varchar)              ;
+DROP FUNCTION IF EXISTS code_belongs_to_codifier(par_code_id integer, par_codifier_text varchar)             ;
 
 DROP TYPE IF EXISTS codified_view;
 DROP TYPE IF EXISTS code_construction_input;

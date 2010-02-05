@@ -19,6 +19,31 @@ SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
 -- CREATE TYPE ...
 -- CREATE OR REPLACE FUNCTION ...
 
+CREATE OR REPLACE FUNCTION code_belongs_to_codifier(par_code_id integer, par_codifier_text varchar) RETURNS boolean AS $$
+DECLARE
+        e boolean;
+	cnt integer;
+BEGIN
+        SELECT TRUE
+        INTO e
+        FROM sch_<<$app_name$>>.codes_tree AS ct, sch_<<$app_name$>>.codes AS c
+        WHERE c.code_text     = par_codifier_text
+	  AND ct.supercode_id = c.code_id
+	  AND ct.subcode_id   = par_code_id;
+        
+        GET DIAGNOSTICS cnt = ROW_COUNT;
+
+        IF cnt = 0 THEN
+                RETURN FALSE; 
+        ELSIF cnt > 1 THEN
+                RAISE EXCEPTION 'Data inconsistecy error detected, when trying to check, if code {ID:%} belongs to codifier "%"! Multiple belongings are found, but only one must have been.', par_code_id, par_codifier_text;
+                RETURN FALSE; 
+	ELSE 
+		RETURN TRUE; 
+	END IF;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TYPE codified_view AS (
         subcode_id            integer 
       , subcode_text          varchar 
@@ -42,7 +67,7 @@ BEGIN
              , c_super.code_type    AS supercode_type
              , ct.dflt_subcode_isit AS default_subcode_isit
         INTO cv
-        FROM codes AS c_sub, codes_tree AS ct, codes AS c_super
+        FROM sch_<<$app_name$>>.codes AS c_sub, sch_<<$app_name$>>.codes_tree AS ct, sch_<<$app_name$>>.codes AS c_super
         WHERE   c_sub.code_text = par_code
           AND c_super.code_text = par_codifier
           AND ct.supercode_id   = c_super.code_id
@@ -61,14 +86,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION get_nonplaincode_by_codestr(par_codifier varchar) RETURNS codes AS $$
+CREATE OR REPLACE FUNCTION get_nonplaincode_by_codestr(par_codifier varchar) RETURNS sch_<<$app_name$>>.codes AS $$
 DECLARE
-        ccc codes%ROWTYPE;
+        ccc sch_<<$app_name$>>.codes%ROWTYPE;
         cnt integer;
 BEGIN
         SELECT c.*
         INTO ccc
-        FROM codes AS c
+        FROM sch_<<$app_name$>>.codes AS c
         WHERE c.code_text = $1;
         
         GET DIAGNOSTICS cnt = ROW_COUNT;
@@ -86,36 +111,36 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION type_of_code(par_code_id integer) RETURNS code_type AS $$
         SELECT c.code_type
-        FROM codes AS c
+        FROM sch_<<$app_name$>>.codes AS c
         WHERE c.code_id = $1;
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION get_code_by_codeid(par_code_id integer) RETURNS codes AS $$
+CREATE OR REPLACE FUNCTION get_code_by_codeid(par_code_id integer) RETURNS sch_<<$app_name$>>.codes AS $$
         SELECT c.* 
-        FROM codes AS c
+        FROM sch_<<$app_name$>>.codes AS c
         WHERE c.code_id=$1;
 $$ LANGUAGE SQL;
 
 ---------------------------------------
 
-CREATE OR REPLACE FUNCTION get_codes_of_codifier_byid(par_codifier_id integer) RETURNS SETOF codes AS $$ 
+CREATE OR REPLACE FUNCTION get_codes_of_codifier_byid(par_codifier_id integer) RETURNS SETOF sch_<<$app_name$>>.codes AS $$ 
         SELECT c.*
-        FROM codes AS c, codes_tree AS ct
+        FROM sch_<<$app_name$>>.codes AS c, sch_<<$app_name$>>.codes_tree AS ct
         WHERE c.code_id = ct.subcode_id
           AND ct.supercode_id = $1;
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION get_codes_of_codifier_bystr(par_codifier_name varchar) RETURNS SETOF codes AS $$ 
+CREATE OR REPLACE FUNCTION get_codes_of_codifier_bystr(par_codifier_name varchar) RETURNS SETOF sch_<<$app_name$>>.codes AS $$ 
         SELECT c_sub.*
-        FROM codes AS c_sub, codes_tree AS ct, codes AS c_super
+        FROM sch_<<$app_name$>>.codes AS c_sub, sch_<<$app_name$>>.codes_tree AS ct, sch_<<$app_name$>>.codes AS c_super
         WHERE c_sub.code_id = ct.subcode_id
           AND ct.supercode_id = c_super.code_id
           AND c_super.code_text = $1;
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION get_codifiers_of_code_byid(par_code_id integer) RETURNS SETOF codes AS $$ 
+CREATE OR REPLACE FUNCTION get_codifiers_of_code_byid(par_code_id integer) RETURNS SETOF sch_<<$app_name$>>.codes AS $$ 
         SELECT c_super.*
-        FROM codes AS c_super, codes_tree AS ct
+        FROM sch_<<$app_name$>>.codes AS c_super, sch_<<$app_name$>>.codes_tree AS ct
         WHERE c_super.code_id = ct.supercode_id
           AND ct.subcode_id = $1;
 $$ LANGUAGE SQL;
@@ -136,7 +161,7 @@ BEGIN
                 RETURN 0; 
         END IF;
 
-        DELETE FROM codes WHERE code_id = cv.subcode_id;
+        DELETE FROM sch_<<$app_name$>>.codes WHERE code_id = cv.subcode_id;
 
         GET DIAGNOSTICS cnt = ROW_COUNT;
 
@@ -148,7 +173,7 @@ CREATE OR REPLACE FUNCTION remove_code_byid(par_c integer) RETURNS integer AS $$
 DECLARE
         cnt integer;
 BEGIN
-        DELETE FROM codes WHERE code_id = par_c;
+        DELETE FROM sch_<<$app_name$>>.codes WHERE code_id = par_c;
 
         GET DIAGNOSTICS cnt = ROW_COUNT;
 
@@ -158,7 +183,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION remove_codifier_bystr(if_exists boolean, par_cf varchar) RETURNS integer AS $$ -- must return at least 1 (for the codifier), orelse an error occurred
 DECLARE 
-        c codes%ROWTYPE;
+        c sch_<<$app_name$>>.codes%ROWTYPE;
         cnt integer;
 BEGIN
         c:= get_nonplaincode_by_codestr(par_cf);
@@ -170,7 +195,7 @@ BEGIN
                 RETURN 0; 
         END IF;
 
-        DELETE FROM codes WHERE code_id = c.code_id;
+        DELETE FROM sch_<<$app_name$>>.codes WHERE code_id = c.code_id;
 
         GET DIAGNOSTICS cnt = ROW_COUNT;
 
@@ -183,7 +208,7 @@ CREATE OR REPLACE FUNCTION get_alldepths_subcodes_of_codifier(par_cf_id integer)
             VALUES ($1)
           UNION
             SELECT subcode_id 
-            FROM codes_tree AS ct, subcodes AS sc
+            FROM sch_<<$app_name$>>.codes_tree AS ct, subcodes AS sc
             WHERE ct.supercode_id = sc.r_supercode_id
         )
         SELECT r_supercode_id FROM subcodes;
@@ -197,7 +222,7 @@ DECLARE
 BEGIN
         IF par_cascade = FALSE THEN
                 SELECT count(*) INTO cnt
-                FROM codes_tree AS ct_super, codes_tree AS ct_sub
+                FROM sch_<<$app_name$>>.codes_tree AS ct_super, sch_<<$app_name$>>.codes_tree AS ct_sub
                 WHERE par_c = ct_super.supercode_id
                   AND ct_super.subcode_id = ct_sub.supercode_id;
                 
@@ -213,7 +238,7 @@ BEGIN
                 heavyused_subcodes := 
                      ARRAY(
                          SELECT subcode_id
-                         FROM codes_tree
+                         FROM sch_<<$app_name$>>.codes_tree
                          WHERE     subcodes @> ARRAY[subcode_id]
                            AND NOT subcodes @> ARRAY[supercode_id]
                            AND supercode_id != par_c
@@ -226,7 +251,7 @@ BEGIN
                      );
         END IF;
         
-        DELETE FROM codes WHERE ARRAY[code_id] <@ subcodes AND code_id != par_c;
+        DELETE FROM sch_<<$app_name$>>.codes WHERE ARRAY[code_id] <@ subcodes AND code_id != par_c;
 
         GET DIAGNOSTICS cnt = ROW_COUNT;
 
@@ -241,7 +266,7 @@ DECLARE
         subcodes integer[];
 BEGIN
         cnt := remove_subcodes_by_codifierid(par_c, par_cascade, par_greedy);
-        DELETE FROM codes WHERE code_id = par_c;
+        DELETE FROM sch_<<$app_name$>>.codes WHERE code_id = par_c;
 
         RETURN (cnt+1);
 END;
@@ -251,7 +276,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION bind_code_to_codifier(par_code_id integer, par_codifier_id integer, par_dflt boolean) RETURNS boolean AS $$ 
 BEGIN
-        INSERT INTO codes_tree (supercode_id, subcode_id, dflt_subcode_isit) 
+        INSERT INTO sch_<<$app_name$>>.codes_tree (supercode_id, subcode_id, dflt_subcode_isit) 
         VALUES (par_codifier_id, par_code_id, COALESCE(par_dflt, FALSE));
         
         RETURN TRUE;
@@ -262,7 +287,7 @@ CREATE OR REPLACE FUNCTION unbind_code_from_codifier(if_exists boolean, par_code
 DECLARE 
         cnt integer:= 0;
 BEGIN
-        DELETE FROM codes_tree WHERE supercode_id = par_codifier_id AND subcode_id = par_code_id;
+        DELETE FROM sch_<<$app_name$>>.codes_tree WHERE supercode_id = par_codifier_id AND subcode_id = par_code_id;
 
         GET DIAGNOSTICS cnt = ROW_COUNT;
 
@@ -283,12 +308,12 @@ DECLARE
         success boolean;
 BEGIN
         IF par_code_construct.code_type = 'plain code' THEN
-                c_id := nextval('plain_codes_ids_seq');
+                c_id := nextval('sch_<<$app_name$>>.plain_codes_ids_seq');
         ELSE
-                c_id := nextval('codifiers_ids_seq');
+                c_id := nextval('sch_<<$app_name$>>.codifiers_ids_seq');
         END IF;
 
-        INSERT INTO codes (code_id, code_text, code_type) 
+        INSERT INTO sch_<<$app_name$>>.codes (code_id, code_text, code_type) 
         VALUES (c_id, par_code_construct.code_text, par_code_construct.code_type);
 
         IF NOT (par_super_code_id IS NULL) THEN
@@ -309,8 +334,8 @@ BEGIN
                 RETURN 0;         
         END IF;
 
-        INSERT INTO codes (code_id, code_text, code_type) 
-        VALUES (nextval('codifiers_ids_seq'), par_code_construct.code_text, par_code_construct.code_type)
+        INSERT INTO sch_<<$app_name$>>.codes (code_id, code_text, code_type) 
+        VALUES (nextval('sch_<<$app_name$>>.codifiers_ids_seq'), par_code_construct.code_text, par_code_construct.code_type)
         RETURNING code_id INTO c_id;
 
         IF NOT (par_super_code_id IS NULL) THEN
@@ -336,7 +361,7 @@ DECLARE
         i integer;
         cf_id integer;
         c_id integer;
-        sc codes;
+        sc sch_<<$app_name$>>.codes;
         s boolean;
 BEGIN
         cf_id:= par_cf_id;
@@ -370,7 +395,7 @@ CREATE OR REPLACE FUNCTION add_subcodes_under_codifier_bystr(
         ) 
 RETURNS integer AS $$ 
 DECLARE
-        sc codes;
+        sc sch_<<$app_name$>>.codes;
 BEGIN
         sc:= get_nonplaincode_by_codestr(par_cf_name);
         
@@ -397,7 +422,7 @@ DECLARE
         supercf_id integer;
         cf_id integer;
         c_id integer;
-        sc codes;
+        sc sch_<<$app_name$>>.codes;
 BEGIN
         supercf_id:= add_subcodes_under_codifier_bystr(par_supercf_name, NULL :: varchar, VARIADIC ARRAY[par_cf_construct]);
 
@@ -423,7 +448,7 @@ DECLARE
         supercf_id integer;
         cf_id integer;
         c_id integer;
-        sc codes%ROWTYPE;
+        sc sch_<<$app_name$>>.codes%ROWTYPE;
 BEGIN
         -- validate input data
         IF par_cf_new_type = 'plain code' THEN
@@ -437,13 +462,13 @@ BEGIN
         END IF;
         
         IF par_reidentify THEN
-                UPDATE codes SET code_id = nextval('codifiers_ids_seq') WHERE code_id = par_cf_id
+                UPDATE sch_<<$app_name$>>.codes SET code_id = nextval('sch_<<$app_name$>>.codifiers_ids_seq') WHERE code_id = par_cf_id
                 RETURNING code_id INTO cf_id;
         ELSE 
                 cf_id:= par_cf_id;
         END IF;
         
-        UPDATE codes SET code_type = par_cf_new_type WHERE code_id = cf_id;
+        UPDATE sch_<<$app_name$>>.codes SET code_type = par_cf_new_type WHERE code_id = cf_id;
 
         RETURN cf_id;
 END;
@@ -476,7 +501,7 @@ DECLARE
         cnt integer;
 BEGIN
         SELECT subcode_id INTO d
-        FROM codes_tree 
+        FROM sch_<<$app_name$>>.codes_tree 
         WHERE supercode_id = par_cf_id
           AND dflt_subcode_isit;
 
@@ -504,7 +529,7 @@ DECLARE
 BEGIN
         SELECT subcode_id 
         INTO d
-        FROM codes_tree AS ct, codes AS super_c 
+        FROM sch_<<$app_name$>>.codes_tree AS ct, sch_<<$app_name$>>.codes AS super_c 
         WHERE super_c.code_text = par_cf_name
           AND ct.supercode_id = super_c.code_id
           AND dflt_subcode_isit;
@@ -574,3 +599,4 @@ GRANT EXECUTE ON FUNCTION get_nonplaincode_by_codestr(par_codifier varchar)     
 GRANT EXECUTE ON FUNCTION get_codified_view_by_codestr(par_codifier varchar, par_code varchar)                  TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION codifier_default_code_byid(par_if_exists boolean, par_cf_id integer)                  TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION codifier_default_code_bystr(par_if_exists boolean, par_cf_name varchar)               TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION code_belongs_to_codifier(par_code_id integer, par_codifier_text varchar)              TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
