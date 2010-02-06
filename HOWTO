@@ -64,7 +64,7 @@ Requirements:
     PERMISSIONS to write in $PGDATA directory
 
 To install this DB package (in PostgreSQL, in Linux) run script:
-> db_inst.sh <db_name> (--drop | --new | --overwrite | --existing | --list) <app_name> (--drop | --new | --overwrite | --existing | --list) (--drop | --new | --overwrite | --existing) [1]
+> db_inst.sh <db_name> (--drop | --new | --overwrite | --existing | --list) <app_name> (--drop | --new | --overwrite | --existing | --list) (--drop | --new | --overwrite | --existing) [1 [+<line_number>g]] 
 
 Parameters:
 (1) <db_name> 
@@ -131,10 +131,14 @@ Parameters:
            Warning!! Accordind to the standard used here, the test script 
            doesn't have to leave DB unchanged. F.e., it may use SEQUENCE, 
            and then restart it at minimal value.
-(6) [1] (optional "1")
+(6) [1 [+<line_number>g]] (optional)
         if you put "1" 
            then you will get resulting log file content viewed by "less". 
            Recommended.
+           The additional option to tha is to jump to a concrete line in 
+           resulting log (for cases, when log file is big, and debugging 
+           is long).
+ 
 
 Allowed DB commands combinations:
    ## | <DB name> | <App. name> | This package
@@ -164,11 +168,11 @@ Commands represantations as command line arguments:
     list      | --list      | -l
 
 For the combinations 3,4,5,13,14, usage: 
-    $progname <db_name> [ --drop | -d ] <app_name> [ --drop | -d ] [1]
-    $progname <db_name> [ --drop | -d ] [1]
-    $progname <db_name> [ --existing | -e ] <app_name> [ --drop | -d ] [1]
-    $progname <db_name> [ --list | -e ] [1]
-    $progname <db_name> [ --existing | -e ] <app_name> [ --list | -l ] [1]
+    $progname <db_name> [ --drop | -d ] <app_name> [ --drop | -d ] [1 [+<line_number>g]]
+    $progname <db_name> [ --drop | -d ] [1 [+<line_number>g]]
+    $progname <db_name> [ --existing | -e ] <app_name> [ --drop | -d ] [1 [+<line_number>g]]
+    $progname <db_name> [ --list | -e ] [1 [+<line_number>g]]
+    $progname <db_name> [ --existing | -e ] <app_name> [ --list | -l ] [1 [+<line_number>g]]
 
 Since the PostgreSQL has some strange case-sensitivity behaviour 
 in the \c[onnect] command, it is decided to use lowercase DB and 

@@ -55,5 +55,5 @@ elif [ "$1" = "--unpack" ]; then
         unpack "$2"
 else
         unpack --clean
-	$unpacked_dir/db_inst.sh $1 $2 $3 $4 $5 $6
+	$unpacked_dir/db_inst.sh $1 $2 $3 $4 $5 $6 $7
 fi

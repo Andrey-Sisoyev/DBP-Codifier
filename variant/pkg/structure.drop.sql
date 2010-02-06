@@ -7,8 +7,6 @@
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
 
-\i functions.drop.sql 
-
 \c <<$db_name$>> user_<<$app_name$>>_owner
 
 SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
@@ -21,6 +19,11 @@ DELETE FROM dbp_packages WHERE package_name = '<<$pkg.name$>>'
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
+ALTER TABLE named_in_languages
+	DROP CONSTRAINT named_in_languages_lng_codekey;
+
+\i functions.drop.sql 
+
 DROP TRIGGER IF EXISTS tri_codes_tree_onmodify ON codes_tree;
 DROP TRIGGER IF EXISTS tri_codes_onmodify ON codes;
 
@@ -30,8 +33,9 @@ DROP FUNCTION IF EXISTS codes_tree_onmodify();
 DROP INDEX IF EXISTS codifiers_idx;
 DROP INDEX IF EXISTS codestexts_in_codes_idx;
 
-DROP TABLE IF EXISTS codes_tree;
 DROP TABLE IF EXISTS codes_names;
+DROP TABLE IF EXISTS named_in_languages;
+DROP TABLE IF EXISTS codes_tree;
 DROP TABLE IF EXISTS codes;
 
 DROP SEQUENCE IF EXISTS codifiers_ids_seq;

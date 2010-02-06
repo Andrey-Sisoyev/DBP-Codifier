@@ -51,8 +51,6 @@ CREATE TABLE codes (
       , additional_field_5 varchar       NULL
 ) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
 
-INSERT INTO codes (code_id, code_type, code_text) VALUES (0, 'metacodifier', 'Root');
-
 CREATE INDEX codestexts_in_codes_idx ON codes(code_text) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs;
 
 CREATE TABLE codes_tree (
@@ -73,7 +71,8 @@ CREATE TABLE named_in_languages (
   TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
 
 CREATE TABLE codes_names (
-        code_id     integer NOT NULL PRIMARY KEY 
+        code_id     integer NOT NULL 
+      , PRIMARY KEY (code_id, lng_of_name)
       , FOREIGN KEY (code_id)     REFERENCES codes(code_id) ON DELETE CASCADE  ON UPDATE CASCADE
       , FOREIGN KEY (lng_of_name) REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) INHERITS (named_in_languages) 
@@ -90,9 +89,10 @@ ALTER TABLE codes_names ALTER COLUMN entity SET DEFAULT 'code';
 ALTER TABLE named_in_languages 
         ADD CONSTRAINT named_in_languages_lng_codekey 
                 CHECK (code_belongs_to_codifier(
-                                make_acodekeyl(
-                                          make_codekey_null
-                                        , make_codekey_bystr("Languages")
+                                FALSE
+                              , make_acodekeyl(
+                                          make_codekey_null()
+                                        , make_codekey_bystr('Languages')
                                         , make_codekey_byid(lng_of_name)
                       )         )       );
 
@@ -195,7 +195,7 @@ BEGIN
         LIMIT 1;
         
         IF lng IS NOT NULL THEN
-                RAISE EXCEPTION 'An error occurred, when trying to register a subcode with the with name "%" in language "%" in the codifier "%"! The codifier already contains a code, that has same name in same language. No duplicate codes are allowed in one codifier.', subcode_name, (get_code(TRUE, make_acodekeyl_byid(lng), TRUE)).code_text, new_cfr_name;
+                RAISE EXCEPTION 'An error occurred, when trying to register a subcode with the with name "%" in language "%" in the codifier "%"! The codifier already contains a code, that has same name in same language. No duplicate codes are allowed in one codifier.', subcode_name, (get_code(TRUE, make_acodekeyl_byid(lng))).code_text, new_cfr_name;
                 IF    TG_OP = 'INSERT' THEN
                         RETURN NULL;
                 ELSIF TG_OP = 'UPDATE' THEN
@@ -217,8 +217,10 @@ DECLARE
         c sch_<<$app_name$>>.codes%ROWTYPE;
         dup_c_id integer;
         dup_cf_id integer;
+        cond boolean;
 BEGIN
-        IF NEW.code_text IS DISTINCT FROM OLD.code_text THEN
+        cond:= TG_OP = 'INSERT'; IF NOT cond THEN cond:= NEW.code_text IS DISTINCT FROM OLD.code_text; END IF;
+        IF cond THEN
                 dup_c_id:= NULL;
                 SELECT s_ct.subcode_id, s_ct.supercode_id
                 INTO dup_c_id, dup_cf_id
@@ -233,7 +235,7 @@ BEGIN
                 LIMIT 1;
 
                 IF dup_c_id IS NOT NULL THEN
-                        RAISE EXCEPTION 'An error occurred, when an % operation attempted on a code with ID "%" in the table "sch_<<$app_name$>>.codes"! Can''t set "code_text" field to new value "%", because it violates uniqueness constraint of "code_text" of codes under one codifier. Under codifier "%" there already is another code with such name, ID: %.', TG_OP, COALESCE(OLD.code_id, NEW.code_id), NEW.code_text, (get_code(FALSE, make_acodekeyl_byid(dup_cf_id), FALSE)).code_text, dup_c_id;
+                        RAISE EXCEPTION 'An error occurred, when an % operation attempted on a code with ID "%" in the table "sch_<<$app_name$>>.codes"! Can''t set "code_text" field to new value "%", because it violates uniqueness constraint of "code_text" of codes under one codifier. Under codifier "%" there already is another code with such name, ID: %.', TG_OP, COALESCE(OLD.code_id, NEW.code_id), NEW.code_text, (get_code(FALSE, make_acodekeyl_byid(dup_cf_id))).code_text, dup_c_id;
                         IF    TG_OP = 'INSERT' THEN
                                 RETURN NULL;
                         ELSIF TG_OP = 'UPDATE' THEN
@@ -243,7 +245,7 @@ BEGIN
         END IF;
         
         IF NEW.code_type != 'plain code' THEN
-                c:= get_nonplaincode_by_codestr (NEW.code_text);
+                c:= get_nonplaincode_by_str (NEW.code_text);
                 IF NOT (c IS NULL) AND c.code_id != NEW.code_id THEN
                         RAISE EXCEPTION 'An error occurred, when an % operation attempted on a nonplain code with the name "%" in the table "sch_<<$app_name$>>.codes"! There already is a nonplain code with such name (ID: %) - duplicates are allowed only for plain codes and under different codifiers.', TG_OP, c.code_text, c.code_id;
                         IF    TG_OP = 'INSERT' THEN
@@ -269,8 +271,10 @@ DECLARE
         co sch_<<$app_name$>>.codes%ROWTYPE;
         dup_c_id integer;
         dup_cf_id integer;
+        cond boolean;
 BEGIN
-        IF NEW.name IS DISTINCT FROM OLD.name THEN
+        cond:= TG_OP = 'INSERT'; IF NOT cond THEN cond:= NEW.name IS DISTINCT FROM OLD.name; END IF;
+        IF cond THEN
                 dup_c_id:= NULL;
                 SELECT s_ct.subcode_id, s_ct.supercode_id
                 INTO dup_c_id, dup_cf_id
@@ -285,36 +289,31 @@ BEGIN
                 LIMIT 1;
 
                 IF dup_c_id IS NOT NULL THEN
-                        RAISE EXCEPTION 'An error occurred, when an % operation attempted on a code with ID "%" in the table "sch_<<$app_name$>>.codes_names"! Can''t set "name" field to new value "%", because it violates uniqueness constraint of "name" of codes under one codifier. Under codifier "%" there already is another code with such name, ID: %.', TG_OP, COALESCE(OLD.code_id, NEW.code_id), NEW.name, (get_code(FALSE, make_acodekeyl_byid(dup_cf_id), FALSE)).code_text, dup_c_id;
                         IF    TG_OP = 'INSERT' THEN
-                                RETURN NULL;
+                                RAISE EXCEPTION 'An error occurred, when an % operation attempted on a code with ID "%" in the table "sch_<<$app_name$>>.codes_names"! Can''t set "name" field to new value "%", because it violates uniqueness constraint of "name" of codes under one codifier. Under codifier "%" there already is another code with such name, ID: %.', TG_OP, NEW.code_id, NEW.name, (get_code(FALSE, make_acodekeyl_byid(dup_cf_id))).code_text, dup_c_id;
                         ELSIF TG_OP = 'UPDATE' THEN
-                                RETURN OLD;
+                                RAISE EXCEPTION 'An error occurred, when an % operation attempted on a code with ID "%" in the table "sch_<<$app_name$>>.codes_names"! Can''t set "name" field to new value "%", because it violates uniqueness constraint of "name" of codes under one codifier. Under codifier "%" there already is another code with such name, ID: %.', TG_OP, OLD.code_id, NEW.name, (get_code(FALSE, make_acodekeyl_byid(dup_cf_id))).code_text, dup_c_id;
                         END IF;
                 END IF;
         END IF;
         
-        co:= get_code(FALSE, NEW.code_id, FALSE);
+        co:= get_code(FALSE, make_acodekeyl_byid(NEW.code_id));
 
         IF co.code_type != 'plain code' THEN
                 dup_cf_id:= NULL;
 
                 SELECT c.code_id
                 INTO dup_cf_id
-                FROM sch_<<$app_name$>>.codes_names AS cn
+                FROM sch_<<$app_name$>>.codes_names AS co_n
                    , sch_<<$app_name$>>.codes       AS c
                 WHERE c.code_id != NEW.code_id
                   AND c.code_type != 'plain code'
-                  AND cn.lng_of_name = NEW.lng_of_name
-                  AND cn.name = NEW.name;
+                  AND co_n.code_id = c.code_id
+                  AND co_n.lng_of_name = NEW.lng_of_name
+                  AND co_n.name = NEW.name;
 
                 IF dup_cf_id IS NOT NULL THEN
-                        RAISE EXCEPTION 'An error occurred, when an % operation attempted on a nonplain code with the name "%" (language: %) in the table "sch_<<$app_name$>>.codes_names"! There already is a nonplain code with such name (ID: %) - duplicates are allowed only for plain codes and under different codifiers.', TG_OP, NEW.name, (get_code(FALSE, make_acodekeyl_byid(NEW.lng_of_name), FALSE)).code_text, dup_cf_id;
-                        IF    TG_OP = 'INSERT' THEN
-                                RETURN NULL;
-                        ELSIF TG_OP = 'UPDATE' THEN
-                                RETURN OLD;
-                        END IF;
+                        RAISE EXCEPTION 'An error occurred, when an % operation attempted on a nonplain code with the name "%" (language: %) in the table "sch_<<$app_name$>>.codes_names"! There already is a nonplain code with such name (ID: %) - duplicates are allowed only for plain codes and under different codifiers.', TG_OP, NEW.name, (get_code(FALSE, make_acodekeyl_byid(NEW.lng_of_name))).code_text, dup_cf_id;
                 END IF;
         END IF;
 

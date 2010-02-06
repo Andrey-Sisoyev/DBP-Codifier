@@ -21,18 +21,19 @@ SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
 
 -- Referencing functions:
 
+DROP FUNCTION IF EXISTS make_codekey(par_code_id integer, par_code_text varchar);
 DROP FUNCTION IF EXISTS make_codekey_null();
 DROP FUNCTION IF EXISTS make_codekey_byid(par_code_id integer);
 DROP FUNCTION IF EXISTS make_codekey_bystr(par_code_text varchar);
-DROP FUNCTION IF EXISTS make_acodekey_null();
 DROP FUNCTION IF EXISTS make_acodekey(par_cf_key t_code_key, par_c_key t_code_key);
+DROP FUNCTION IF EXISTS make_acodekey_null();
 DROP FUNCTION IF EXISTS make_codekeyl(par_key_lng t_code_key, par_code_key t_code_key);
 DROP FUNCTION IF EXISTS make_codekeyl_null();
 DROP FUNCTION IF EXISTS make_codekeyl_byid(par_code_id integer);
 DROP FUNCTION IF EXISTS make_codekeyl_bystr(par_code_text varchar);
 DROP FUNCTION IF EXISTS make_codekeyl_bystrl(par_lng_key t_code_key, par_code_text varchar);
-DROP FUNCTION IF EXISTS make_acodekeyl_null();
 DROP FUNCTION IF EXISTS make_acodekeyl(par_key_lng t_code_key, par_cf_key t_code_key, par_c_key t_code_key);
+DROP FUNCTION IF EXISTS make_acodekeyl_null();
 DROP FUNCTION IF EXISTS make_acodekeyl_byid(par_code_id integer);
 DROP FUNCTION IF EXISTS make_acodekeyl_bystr1(par_code_text varchar);
 DROP FUNCTION IF EXISTS make_acodekeyl_bystr2(par_codifier_text varchar, par_code_text varchar);
@@ -55,21 +56,22 @@ DROP FUNCTION IF EXISTS code_id_of_undefined();
 DROP FUNCTION IF EXISTS code_id_of_unclassified();
 DROP FUNCTION IF EXISTS code_id_of_error();
 DROP FUNCTION IF EXISTS code_id_of_ambiguous();
-DROP FUNCTION IF EXISTS code_belongs_to_codifier(par_acodekeyl t_addressed_code_key_by_lng);
-DROP FUNCTION IF EXISTS codifier_default_code(par_if_exists boolean, par_cf_keyl t_code_key_by_lng);
+DROP FUNCTION IF EXISTS code_id_of_language(varchar);
+DROP FUNCTION IF EXISTS code_belongs_to_codifier(par_if_cf_exists boolean, par_acodekeyl t_addressed_code_key_by_lng);
 DROP FUNCTION IF EXISTS get_code(par_if_exists boolean, par_key t_addressed_code_key_by_lng);
+DROP FUNCTION IF EXISTS codifier_default_code(par_if_exists boolean, par_cf_keyl t_code_key_by_lng);
 DROP FUNCTION IF EXISTS get_codes_l(par_key t_code_key_by_lng);
 DROP FUNCTION IF EXISTS get_nonplaincode_by_str(par_codifier varchar);
 DROP FUNCTION IF EXISTS get_code_by_str(par_codifier varchar, par_code varchar);
 DROP FUNCTION IF EXISTS get_codes_of_codifier(par_acodekeyl t_addressed_code_key_by_lng);
 DROP FUNCTION IF EXISTS get_codifiers_of_code(par_acodekeyl t_addressed_code_key_by_lng);
-DROP FUNCTION IF EXISTS find_subcodes(par_if_exists boolean, par_cf_key t_addressed_code_key_by_lng, par_only_ones_not_reachable_from_elsewhere boolean);
+DROP FUNCTION IF EXISTS find_subcodes(par_if_exists boolean, par_cf_key t_addressed_code_key_by_lng, par_include_code_itself boolean, par_only_ones_not_reachable_from_elsewhere boolean);
 
 -- Administration functions:
 
-DROP FUNCTION IF EXISTS remove_code(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_only_ones_not_reachable_from_elsewhere boolean);
+DROP FUNCTION IF EXISTS remove_code(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_remove_code boolean, par_cascade_remove_subcodes boolean, par_if_cascade__only_ones_not_reachable_from_elsewhere boolean);
 DROP FUNCTION IF EXISTS bind_code_to_codifier(par_c_acodekeyl t_addressed_code_key_by_lng, par_cf_codekeyl t_code_key_by_lng, par_dflt boolean);
-DROP FUNCTION IF EXISTS unbind_code_from_codifier(par_if_exists boolean, par_c_acodekeyl t_addressed_code_key_by_lng, par_dflt boolean);
+DROP FUNCTION IF EXISTS unbind_code_from_codifier(par_if_exists boolean, par_c_acodekeyl t_addressed_code_key_by_lng);
 DROP FUNCTION IF EXISTS new_code(par_code_construct code_construction_input, par_super_code t_code_key_by_lng, par_dflt_isit boolean);
 DROP FUNCTION IF EXISTS add_subcodes_under_codifier(par_cf t_code_key_by_lng, par_cf_dflt_codestr varchar, VARIADIC par_codes_array code_construction_input[]);
 DROP FUNCTION IF EXISTS new_codifier_w_subcodes(par_super_cf t_code_key_by_lng, par_cf_construct code_construction_input, par_cf_dflt_codestr varchar, VARIADIC par_codes_array code_construction_input[]);
@@ -77,6 +79,9 @@ DROP FUNCTION IF EXISTS make_codifier_from_plaincode(par_if_exists boolean, par_
 DROP FUNCTION IF EXISTS make_codifier_from_plaincode_w_values(par_if_exists boolean, par_reidentify boolean, par_c t_code_key_by_lng, par_cf_new_type code_type, par_cf_dflt_codestr varchar, VARIADIC par_codes_array code_construction_input[]);
 DROP FUNCTION IF EXISTS add_code_lng_names(par_if_exists boolean, par_c t_addressed_code_key_by_lng, VARIADIC par_codesnames_array code_lngname_construction_input[]);
 
+
+
+DROP TYPE IF EXISTS code_lngname_construction_input;
 DROP TYPE IF EXISTS result_of_making_new_codifier_w_subcodes;
 DROP TYPE IF EXISTS code_construction_input;
 DROP TYPE IF EXISTS codes_tree_node;
@@ -85,4 +90,3 @@ DROP TYPE IF EXISTS t_addressed_code_key_by_lng;
 DROP TYPE IF EXISTS t_code_key_by_lng;
 DROP TYPE IF EXISTS t_addressed_code_key;
 DROP TYPE IF EXISTS t_code_key;
-DROP TYPE IF EXISTS code_lngname_construction_input;
