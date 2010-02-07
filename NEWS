@@ -29,3 +29,18 @@ Changes from 0.3 to 0.4
 * No more dependency from Language. Now the package codifies languages itself.
   Language package consumed. Future versions of packages, 
   that required Language will now require Codifier.
+
+
+Changes from 0.4 to 0.5
+--------------------------------------------
+* Generalized "code_lngname_construction_input" -> "name_construction_input".
+  Added hints, how to use provided sources as templates for administrative
+  API fo any other child-table of "named_in_languages" ancestor-table.
+* No more dependency from Name. Name package consumed. 
+  Field "entity" of "names" table is now :: integer - FK to a code under 
+  codifier "Entities". 
+* Solved insufficient namespacing bug (it wasn't possible to call Codifier 
+  function from other schema). 
+* Added 2 sequences for codifiers "Languages" (9000-9499) and 
+  "Entities" (9500-9999). Also added "new_code" function extension, 
+  that accepts used-defined sequence for code ID generation. 

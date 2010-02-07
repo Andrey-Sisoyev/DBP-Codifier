@@ -1,13 +1,13 @@
 -- Copyright (C) 2010 Andrejs Sisojevs <andrejs.sisojevs@nextmail.ru>
--- 
+--
 -- All rights reserved.
--- 
+--
 -- For information about license see COPYING file in the root directory of current nominal package
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
 
-\c <<$db_name$>> user_<<$app_name$>>_owner
+\c <<$db_name$>> user_<<$app_name$>>_data_admin
 
 SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
 \set ECHO queries
@@ -97,13 +97,19 @@ SELECT 'cf_nm (+l_nm)'       = acodekeyl_type(make_acodekeyl(make_codekey_bystr(
 
 \echo =======Testing administration and lookup functions===========
 
+\c <<$db_name$>> user_<<$app_name$>>_owner
+
+SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
+\set ECHO queries
+SELECT set_config('client_min_messages', 'NOTICE', FALSE);
+
 CREATE OR REPLACE FUNCTION remove_test_set() RETURNS integer AS $$
-DECLARE 
+DECLARE
         out_r RECORD;
 BEGIN
         SELECT remove_code(TRUE, make_acodekeyl_bystr1('test codifier'), TRUE, TRUE, TRUE)
         INTO out_r; RAISE NOTICE 'Output(remove_test_set): %', out_r;
-        
+
         DELETE FROM codes WHERE code_id in (SELECT lost.code_id FROM get_codes_l(make_codekeyl_bystr('306')) AS lost);
 
         RETURN NULL;
@@ -112,7 +118,7 @@ $$ LANGUAGE plpgsql;
 
 \echo File: docs/models/Testing.CodesStructure.ver.odg
 CREATE OR REPLACE FUNCTION create_test_set() RETURNS integer AS $$
-DECLARE 
+DECLARE
         out_r RECORD;
 BEGIN
         PERFORM remove_test_set();
@@ -121,20 +127,20 @@ BEGIN
                         make_codekeyl_bystr('Root')
                       , ROW('test codifier', 'codifier') :: code_construction_input
                       , '101'
-                      , VARIADIC ARRAY[ 
+                      , VARIADIC ARRAY[
                                 ROW('101', 'plain code')
                               , ROW('999', 'plain code')
                               ] :: code_construction_input[]
                       )
         INTO out_r; RAISE NOTICE 'Output(create_test_set): %', out_r;
-        
+
         SELECT make_codifier_from_plaincode_w_values(
                         TRUE
                       , TRUE
                       , make_codekeyl_bystr('101')
                       , 'codifier'
                       , '201'
-                      , VARIADIC ARRAY[ 
+                      , VARIADIC ARRAY[
                                 ROW('201', 'codifier')
                               , ROW('202', 'codifier')
                               , ROW('203', 'codifier')
@@ -151,7 +157,7 @@ BEGIN
         SELECT add_subcodes_under_codifier(
                         make_codekeyl_bystr('201')
                       , '301'
-                      , VARIADIC ARRAY[ 
+                      , VARIADIC ARRAY[
                                 ROW('301', 'codifier')
                               , ROW('302', 'codifier')
                               , ROW('303', 'codifier')
@@ -161,7 +167,7 @@ BEGIN
              , add_subcodes_under_codifier(
                         make_codekeyl_bystr('203')
                       , '305'
-                      , VARIADIC ARRAY[ 
+                      , VARIADIC ARRAY[
                                 ROW('305', 'codifier')
                               , ROW('306', 'plain code')
                               ] :: code_construction_input[]
@@ -169,7 +175,7 @@ BEGIN
              , add_subcodes_under_codifier(
                         make_codekeyl_bystr('204')
                       , '307'
-                      , VARIADIC ARRAY[ 
+                      , VARIADIC ARRAY[
                                 ROW('307', 'codifier')
                               , ROW('308', 'codifier')
                               ] :: code_construction_input[]
@@ -177,7 +183,7 @@ BEGIN
              , add_subcodes_under_codifier(
                         make_codekeyl_bystr('205')
                       , '309'
-                      , VARIADIC ARRAY[ 
+                      , VARIADIC ARRAY[
                                 ROW('309', 'codifier')
                               , ROW('310', 'codifier')
                               ] :: code_construction_input[]
@@ -185,7 +191,7 @@ BEGIN
              , add_subcodes_under_codifier(
                         make_codekeyl_bystr('206')
                       , '312'
-                      , VARIADIC ARRAY[ 
+                      , VARIADIC ARRAY[
                                 ROW('311', 'codifier')
                               , ROW('312', 'codifier')
                               ] :: code_construction_input[]
@@ -193,7 +199,7 @@ BEGIN
              , add_subcodes_under_codifier(
                         make_codekeyl_bystr('207')
                       , '313'
-                      , VARIADIC ARRAY[ 
+                      , VARIADIC ARRAY[
                                 ROW('313', 'codifier')
                               , ROW('314', 'codifier')
                               ] :: code_construction_input[]
@@ -201,7 +207,7 @@ BEGIN
              , add_subcodes_under_codifier(
                         make_codekeyl_bystr('208')
                       , '315'
-                      , VARIADIC ARRAY[ 
+                      , VARIADIC ARRAY[
                                 ROW('315', 'codifier')
                               , ROW('316', 'codifier')
                               ] :: code_construction_input[]
@@ -209,7 +215,7 @@ BEGIN
              , add_subcodes_under_codifier(
                         make_codekeyl_bystr('209')
                       , '306'
-                      , VARIADIC ARRAY[ 
+                      , VARIADIC ARRAY[
                                 ROW('306', 'codifier')
                               ] :: code_construction_input[]
                       )
@@ -245,7 +251,7 @@ BEGIN
                         make_codekeyl_bystr('307')
                       , ROW('402', 'codifier') :: code_construction_input
                       , '501'
-                      , VARIADIC ARRAY[ 
+                      , VARIADIC ARRAY[
                                 ROW('501', 'plain code')
                               ] :: code_construction_input[]
                       )
@@ -253,7 +259,7 @@ BEGIN
                         make_codekeyl_bystr('311')
                       , ROW('403', 'codifier') :: code_construction_input
                       , '502'
-                      , VARIADIC ARRAY[ 
+                      , VARIADIC ARRAY[
                                 ROW('502', 'plain code')
                               , ROW('503', 'plain code')
                               ] :: code_construction_input[]
@@ -290,32 +296,32 @@ BEGIN
         SELECT add_code_lng_names(
                         TRUE
                       , make_acodekeyl_bystr1('101')
-                      , VARIADIC ARRAY[ 
-                                ROW('eng', 'code 101', 'Description od code 101.')
-                              , ROW('rus', 'код 101', 'Описание кода 101.')
-                              ] :: code_lngname_construction_input[]
+                      , VARIADIC ARRAY[
+                                mk_name_construction_input(make_codekeyl_bystr('eng'), 'code 101', make_codekeyl_null(), 'Description od code 101.')
+                              , mk_name_construction_input(make_codekeyl_bystr('rus'), 'код 101' , make_codekeyl_null(), 'Описание кода 101.')
+                              ]
                       )
              , add_code_lng_names(
                         TRUE
                       , make_acodekeyl_bystr1('test codifier')
-                      , VARIADIC ARRAY[ 
-                                ROW('eng', 'test codifier (eng)', 'Description od code "test code".')
-                              , ROW('rus', 'тестовый кодификатор', 'Описание тестового кодификатора.')
-                              ] :: code_lngname_construction_input[]
+                      , VARIADIC ARRAY[
+                                mk_name_construction_input(make_codekeyl_bystr('eng'), 'test codifier (eng)', make_codekeyl_null(), 'Description od code "test code".')
+                              , mk_name_construction_input(make_codekeyl_bystr('rus'), 'тестовый кодификатор' , make_codekeyl_null(), 'Описание тестового кодификатора.')
+                              ]
                       )
              , add_code_lng_names(
                         TRUE
                       , make_acodekeyl_bystr1('306')
-                      , VARIADIC ARRAY[ 
-                                ROW('rus', 'код 306', 'Описание кодификатора 306.')
-                              ] :: code_lngname_construction_input[]
+                      , VARIADIC ARRAY[
+                                mk_name_construction_input(make_codekeyl_bystr('rus'), 'код 306' , make_codekeyl_null(), 'Описание кодификатора 306.')
+                              ]
                       )
              , add_code_lng_names(
                         TRUE
                       , make_acodekeyl_bystr2('203', '306')
-                      , VARIADIC ARRAY[ 
-                                ROW('rus', 'код 306', 'Описание кода 306.')
-                              ] :: code_lngname_construction_input[]
+                      , VARIADIC ARRAY[
+                                mk_name_construction_input(make_codekeyl_bystr('rus'), 'код 306' , make_codekeyl_null(), 'Описание кода 306.')
+                              ]
                       )
         INTO out_r; RAISE NOTICE 'Output(create_test_set): %', out_r;
 
@@ -334,6 +340,12 @@ BEGIN
         RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
+
+\c <<$db_name$>> user_<<$app_name$>>_data_admin
+
+SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
+\set ECHO queries
+SELECT set_config('client_min_messages', 'NOTICE', FALSE);
 
 SELECT create_test_set();
 
@@ -597,7 +609,7 @@ SELECT get_codifiers_of_code(make_acodekeyl_null());
 SELECT c_from.code_text || '->' || c_to.code_text
 FROM sch_<<$app_name$>>.codes as c_from
    , sch_<<$app_name$>>.codes as c_to
-   , sch_<<$app_name$>>.codes_tree as ct 
+   , sch_<<$app_name$>>.codes_tree as ct
 WHERE c_to.code_id = ct.subcode_id
   AND c_from.code_id = ct.supercode_id;
 \echo
@@ -624,7 +636,7 @@ select remove_code(FALSE, make_acodekeyl_bystr1('101'), TRUE, TRUE, TRUE);
 SELECT c_from.code_text || '->' || c_to.code_text AS x
 FROM sch_<<$app_name$>>.codes as c_from
    , sch_<<$app_name$>>.codes as c_to
-   , sch_<<$app_name$>>.codes_tree as ct 
+   , sch_<<$app_name$>>.codes_tree as ct
 WHERE c_to.code_id = ct.subcode_id
   AND c_from.code_id = ct.supercode_id
 ORDER BY x;
@@ -635,7 +647,7 @@ select remove_code(FALSE, make_acodekeyl_bystr1('101'), FALSE, TRUE, TRUE);
 SELECT c_from.code_text || '->' || c_to.code_text AS x
 FROM sch_<<$app_name$>>.codes as c_from
    , sch_<<$app_name$>>.codes as c_to
-   , sch_<<$app_name$>>.codes_tree as ct 
+   , sch_<<$app_name$>>.codes_tree as ct
 WHERE c_to.code_id = ct.subcode_id
   AND c_from.code_id = ct.supercode_id
 ORDER BY x;
@@ -646,7 +658,7 @@ select remove_code(FALSE, make_acodekeyl_bystr1('101'), FALSE, FALSE, TRUE);
 SELECT c_from.code_text || '->' || c_to.code_text AS x
 FROM sch_<<$app_name$>>.codes as c_from
    , sch_<<$app_name$>>.codes as c_to
-   , sch_<<$app_name$>>.codes_tree as ct 
+   , sch_<<$app_name$>>.codes_tree as ct
 WHERE c_to.code_id = ct.subcode_id
   AND c_from.code_id = ct.supercode_id
 ORDER BY x;
@@ -657,7 +669,7 @@ select remove_code(FALSE, make_acodekeyl_bystr1('101'), FALSE, TRUE, FALSE);
 SELECT c_from.code_text || '->' || c_to.code_text AS x
 FROM sch_<<$app_name$>>.codes as c_from
    , sch_<<$app_name$>>.codes as c_to
-   , sch_<<$app_name$>>.codes_tree as ct 
+   , sch_<<$app_name$>>.codes_tree as ct
 WHERE c_to.code_id = ct.subcode_id
   AND c_from.code_id = ct.supercode_id
 ORDER BY x;
@@ -687,7 +699,7 @@ SELECT new_code(
 SELECT add_subcodes_under_codifier(
           make_codekeyl_bystr('501')
         , '601'
-        , VARIADIC ARRAY[ 
+        , VARIADIC ARRAY[
                   ROW('601', 'codifier')
                 , ROW('602', 'codifier')
                 ] :: code_construction_input[]
@@ -698,7 +710,7 @@ SELECT make_codifier_from_plaincode_w_values(
         , make_codekeyl_bystr('501')
         , 'codifier'
         , '602'
-        , VARIADIC ARRAY[ 
+        , VARIADIC ARRAY[
                   ROW('601', 'codifier')
                 , ROW('603', 'codifier')
                 ] :: code_construction_input[]
@@ -706,26 +718,26 @@ SELECT make_codifier_from_plaincode_w_values(
 SELECT add_code_lng_names(
           TRUE
         , make_acodekeyl_bystr1('304')
-        , VARIADIC ARRAY[ 
-                  ROW('rus', 'код 306', 'Описание кодификатора 306.')
-                , ROW('end', 'code 304', 'Description of 304.')
-                ] :: code_lngname_construction_input[]
+        , VARIADIC ARRAY[
+                  mk_name_construction_input(make_codekeyl_bystr('rus'), 'код 306' , make_codekeyl_null(), 'Описание кодификатора 306.')
+                , mk_name_construction_input(make_codekeyl_bystr('eng'), 'code 304' , make_codekeyl_null(), 'Description of 304.')
+                ] :: name_construction_input[]
         );
 SELECT add_code_lng_names(
           TRUE
         , make_acodekeyl_bystr1('303')
-        , VARIADIC ARRAY[ 
-                  ROW('rus', 'код 306', 'Описание кодификатора 306.')
-                , ROW('end', 'code 304', 'Description of 304.')
-                ] :: code_lngname_construction_input[]
+        , VARIADIC ARRAY[
+                  mk_name_construction_input(make_codekeyl_bystr('rus'), 'код 306' , make_codekeyl_null(), 'Описание кодификатора 306.')
+                , mk_name_construction_input(make_codekeyl_bystr('eng'), 'code 304' , make_codekeyl_null(), 'Description of 304.')
+                ] :: name_construction_input[]
         );
 SELECT add_code_lng_names(
           TRUE
         , make_acodekeyl_bystr1('305')
-        , VARIADIC ARRAY[ 
-                  ROW('rus', 'код 306', 'Описание кодификатора 306.')
-                , ROW('end', 'code 304', 'Description of 304.')
-                ] :: code_lngname_construction_input[]
+        , VARIADIC ARRAY[
+                  mk_name_construction_input(make_codekeyl_bystr('rus'), 'код 306' , make_codekeyl_null(), 'Описание кодификатора 306.')
+                , mk_name_construction_input(make_codekeyl_bystr('eng'), 'code 304' , make_codekeyl_null(), 'Description of 304.')
+                ] :: name_construction_input[]
         );
 
 \echo >>>>Triggers tested
@@ -748,6 +760,11 @@ SELECT code_belongs_to_codifier(FALSE, make_acodekeyl_bystr2('Common nominal cod
 \echo =======Administration and lookup functions tested============
 
 \echo =======Cleaning up after testing=============================
+
+\c <<$db_name$>> user_<<$app_name$>>_owner
+SET search_path TO sch_<<$app_name$>>, public;
+\set ECHO queries
+SELECT set_config('client_min_messages', 'NOTICE', FALSE);
 
 DROP FUNCTION remove_test_set();
 DROP FUNCTION create_test_set();

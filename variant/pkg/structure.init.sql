@@ -1,7 +1,7 @@
 -- Copyright (C) 2010 Andrejs Sisojevs <andrejs.sisojevs@nextmail.ru>
--- 
+--
 -- All rights reserved.
--- 
+--
 -- For information about license see COPYING file in the root directory of current nominal package
 
 --------------------------------------------------------------------------
@@ -11,7 +11,7 @@
 
 SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
 
-INSERT INTO dbp_packages (package_name, package_version, dbp_standard_version) 
+INSERT INTO dbp_packages (package_name, package_version, dbp_standard_version)
                    VALUES('<<$pkg.name$>>', '<<$pkg.ver$>>', '<<$pkg.std_ver$>>');
 
 -- ^^^ don't change this !!
@@ -28,13 +28,14 @@ COMMENT ON TYPE code_type IS
 
 -- one hunded sch_<<$app_name$>>.codes reserved for the most fundamental codifiers roots
 CREATE SEQUENCE codifiers_ids_seq -- WARNING!!! Some alterations are there in the data.sql
-        INCREMENT BY 10
+        INCREMENT BY 1
         MINVALUE 100
+        MAXVALUE 8999
         START WITH 100
         NO CYCLE;
 
 -- one hunded sch_<<$app_name$>>.codes reserved for the most fundamental codifiers roots
-CREATE SEQUENCE plain_codes_ids_seq 
+CREATE SEQUENCE plain_codes_ids_seq
         INCREMENT BY 10
         MINVALUE 10000
         START WITH 10000
@@ -64,30 +65,95 @@ CREATE INDEX codifiers_idx ON codes_tree(supercode_id) TABLESPACE tabsp_<<$db_na
 
 -------------------------------------
 
+-- one hunded sch_<<$app_name$>>.codes reserved for the most fundamental codifiers roots
+CREATE SEQUENCE languages_ids_seq -- WARNING!!! Some alterations are there in the data.sql
+        INCREMENT BY 1
+        MINVALUE 9000
+        MAXVALUE 9499
+        START WITH 9000
+        NO CYCLE;
+
+-- one hunded sch_<<$app_name$>>.codes reserved for the most fundamental codifiers roots
+CREATE SEQUENCE entities_ids_seq
+        INCREMENT BY 1
+        MINVALUE 9500
+        MAXVALUE 9999
+        START WITH 9500
+        NO CYCLE;
+
+
+CREATE TABLE names (
+         name        varchar NOT NULL
+       , description varchar     NULL
+       , entity      integer NOT NULL
+       , comments    varchar     NULL
+       , FOREIGN KEY (entity) REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
+) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
+
+-------------------------------------
+
 CREATE TABLE named_in_languages (
           lng_of_name integer
         , FOREIGN KEY (lng_of_name) REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
+        , FOREIGN KEY (entity)      REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) INHERITS (names)
   TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
 
+COMMENT ON TABLE named_in_languages IS
+'A general template for child-tables of "named_in_languages":
+======================================================
+CREATE TABLE <your_object>_names (
+        <your_object>_id integer NOT NULL
+      , PRIMARY KEY (<your_object>_id, lng_of_name)
+      , FOREIGN KEY (<your_object>_id) REFERENCES <your_object>s(<your_object>_id)
+                                                                 ON DELETE CASCADE  ON UPDATE CASCADE
+      , FOREIGN KEY (lng_of_name)      REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
+      , FOREIGN KEY (entity)           REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
+) INHERITS (named_in_languages)
+  TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
+
+SELECT new_code_by_userseqs(
+                ROW (''<your_object>'', ''plain code'' :: code_type) :: code_construction_input
+              , make_codekeyl_bystr(''Entities'')
+              , FALSE
+              , ''''
+              , ''sch_<<$app_name$>>.entities_ids_seq''
+              ) AS <your_object>_entity_id;
+
+ALTER TABLE <your_object>_names ALTER COLUMN entity SET DEFAULT code_id_of_entity(''<your_object>'');
+======================================================
+Notice: if you inherit from both "names" and "named_in_languages", then it''s better to use "<your_object>_names_in_lngs" instead of "<your_object>_names" for child-tables of "named_in_languages".
+';
+
 CREATE TABLE codes_names (
-        code_id     integer NOT NULL 
+        code_id     integer NOT NULL
       , PRIMARY KEY (code_id, lng_of_name)
       , FOREIGN KEY (code_id)     REFERENCES codes(code_id) ON DELETE CASCADE  ON UPDATE CASCADE
       , FOREIGN KEY (lng_of_name) REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
-) INHERITS (named_in_languages) 
+      , FOREIGN KEY (entity)      REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
+) INHERITS (named_in_languages)
   TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
 
-ALTER TABLE codes_names ALTER COLUMN entity SET DEFAULT 'code';
+-------------------------------------
+
+\i functions.init.sql
 
 -------------------------------------
 
-\i functions.init.sql 
+ALTER TABLE codes_names ALTER COLUMN entity SET DEFAULT code_id_of_entity('code');
 
--------------------------------------
+ALTER TABLE names
+        ADD CONSTRAINT named_in_languages__entity_codekey
+                CHECK (code_belongs_to_codifier(
+                                FALSE
+                              , make_acodekeyl(
+                                          make_codekey_null()
+                                        , make_codekey_bystr('Entities')
+                                        , make_codekey_byid(entity)
+                      )         )       );
 
-ALTER TABLE named_in_languages 
-        ADD CONSTRAINT named_in_languages_lng_codekey 
+ALTER TABLE named_in_languages
+        ADD CONSTRAINT named_in_languages__lng_codekey
                 CHECK (code_belongs_to_codifier(
                                 FALSE
                               , make_acodekeyl(
@@ -100,17 +166,22 @@ ALTER TABLE named_in_languages
 
 GRANT USAGE ON SEQUENCE codifiers_ids_seq   TO user_<<$app_name$>>_data_admin;
 GRANT USAGE ON SEQUENCE plain_codes_ids_seq TO user_<<$app_name$>>_data_admin;
+GRANT USAGE ON SEQUENCE languages_ids_seq   TO user_<<$app_name$>>_data_admin;
+GRANT USAGE ON SEQUENCE entities_ids_seq    TO user_<<$app_name$>>_data_admin;
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE codes              TO user_<<$app_name$>>_data_admin;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE codes_names        TO user_<<$app_name$>>_data_admin;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE codes_tree         TO user_<<$app_name$>>_data_admin;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE named_in_languages TO user_<<$app_name$>>_data_admin;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE codes_names        TO user_<<$app_name$>>_data_admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE names              TO user_<<$app_name$>>_data_admin;
 
 GRANT SELECT                         ON TABLE codes              TO user_<<$app_name$>>_data_reader;
 GRANT SELECT                         ON TABLE codes_names        TO user_<<$app_name$>>_data_reader;
 GRANT SELECT                         ON TABLE codes_tree         TO user_<<$app_name$>>_data_reader;
 GRANT SELECT                         ON TABLE named_in_languages TO user_<<$app_name$>>_data_reader;
 GRANT SELECT                         ON TABLE codes_names        TO user_<<$app_name$>>_data_reader;
+GRANT SELECT                         ON TABLE names              TO user_<<$app_name$>>_data_reader;
 
 -------------------------------------
 
@@ -121,7 +192,10 @@ DECLARE
         cnt integer;
         lng integer;
         code_t code_type;
+        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
+        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
+
         SELECT code_text, code_type
         INTO new_cfr_name, code_t
         FROM sch_<<$app_name$>>.codes AS c
@@ -129,28 +203,18 @@ BEGIN
 
         IF code_t = 'plain code' THEN
                 RAISE EXCEPTION 'An error occurred, when trying to register a plain code with the name "%" in the table "sch_<<$app_name$>>.codes_tree"! Plain codes (code_type field) are not allowed to have subcodes, to become codifiers.', new_cfr_name;
-                IF    TG_OP = 'INSERT' THEN
-                        RETURN NULL;
-                ELSIF TG_OP = 'UPDATE' THEN
-                        RETURN OLD;
-                END IF;
         ELSE
                 IF NEW.dflt_subcode_isit = TRUE THEN
-                        
+
                         SELECT COUNT(subcode_id)
-                        INTO cnt 
+                        INTO cnt
                         FROM sch_<<$app_name$>>.codes_tree AS ct
                         WHERE ct.supercode_id = NEW.supercode_id
                           AND ct.dflt_subcode_isit = TRUE
                           AND ct.subcode_id != NEW.subcode_id;
-                        
+
                         IF cnt > 0 THEN
                                 RAISE EXCEPTION 'An error occurred, when trying to register a default code with the name "%" in the table "sch_<<$app_name$>>.codes_tree" ! There already is a default code for this codifier, two defaults in one codifier are not allowed. Please, drop current default for this codified before setting new one.', new_cfr_name;
-                                IF    TG_OP = 'INSERT' THEN
-                                        RETURN NULL;
-                                ELSIF TG_OP = 'UPDATE' THEN
-                                        RETURN OLD;
-                                END IF;
                         END IF;
                 END IF;
         END IF;
@@ -167,14 +231,9 @@ BEGIN
           AND c.code_id = ct.subcode_id
           AND c.code_id != NEW.subcode_id
           AND c.code_text = subcode_name;
-        
+
         IF cnt > 0 THEN
                 RAISE EXCEPTION 'An error occurred, when trying to register a subcode with the name "%" in the codifier "%"! The codifier already contains such code. No duplicate codes are allowed in one codifier.', subcode_name, new_cfr_name;
-                IF    TG_OP = 'INSERT' THEN
-                        RETURN NULL;
-                ELSIF TG_OP = 'UPDATE' THEN
-                        RETURN OLD;
-                END IF;
         END IF;
 
         lng := NULL;
@@ -193,16 +252,12 @@ BEGIN
           AND cn.name         = tn.name
           AND tn.lng_of_name  = cn.lng_of_name
         LIMIT 1;
-        
+
         IF lng IS NOT NULL THEN
                 RAISE EXCEPTION 'An error occurred, when trying to register a subcode with the with name "%" in language "%" in the codifier "%"! The codifier already contains a code, that has same name in same language. No duplicate codes are allowed in one codifier.', subcode_name, (get_code(TRUE, make_acodekeyl_byid(lng))).code_text, new_cfr_name;
-                IF    TG_OP = 'INSERT' THEN
-                        RETURN NULL;
-                ELSIF TG_OP = 'UPDATE' THEN
-                        RETURN OLD;
-                END IF;
         END IF;
 
+        PERFORM leave_schema_namespace(namespace_info);
         RETURN NEW;
 END;
 $tri_codes_tree_onmodify$ LANGUAGE plpgsql;
@@ -218,7 +273,10 @@ DECLARE
         dup_c_id integer;
         dup_cf_id integer;
         cond boolean;
+        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
+        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
+
         cond:= TG_OP = 'INSERT'; IF NOT cond THEN cond:= NEW.code_text IS DISTINCT FROM OLD.code_text; END IF;
         IF cond THEN
                 dup_c_id:= NULL;
@@ -236,26 +294,17 @@ BEGIN
 
                 IF dup_c_id IS NOT NULL THEN
                         RAISE EXCEPTION 'An error occurred, when an % operation attempted on a code with ID "%" in the table "sch_<<$app_name$>>.codes"! Can''t set "code_text" field to new value "%", because it violates uniqueness constraint of "code_text" of codes under one codifier. Under codifier "%" there already is another code with such name, ID: %.', TG_OP, COALESCE(OLD.code_id, NEW.code_id), NEW.code_text, (get_code(FALSE, make_acodekeyl_byid(dup_cf_id))).code_text, dup_c_id;
-                        IF    TG_OP = 'INSERT' THEN
-                                RETURN NULL;
-                        ELSIF TG_OP = 'UPDATE' THEN
-                                RETURN OLD;
-                        END IF;
                 END IF;
         END IF;
-        
+
         IF NEW.code_type != 'plain code' THEN
                 c:= get_nonplaincode_by_str (NEW.code_text);
                 IF NOT (c IS NULL) AND c.code_id != NEW.code_id THEN
                         RAISE EXCEPTION 'An error occurred, when an % operation attempted on a nonplain code with the name "%" in the table "sch_<<$app_name$>>.codes"! There already is a nonplain code with such name (ID: %) - duplicates are allowed only for plain codes and under different codifiers.', TG_OP, c.code_text, c.code_id;
-                        IF    TG_OP = 'INSERT' THEN
-                                RETURN NULL;
-                        ELSIF TG_OP = 'UPDATE' THEN
-                                RETURN OLD;
-                        END IF;
                 END IF;
         END IF;
 
+        PERFORM leave_schema_namespace(namespace_info);
         RETURN NEW;
 END;
 $tri_codes_onmodify$ LANGUAGE plpgsql;
@@ -272,7 +321,10 @@ DECLARE
         dup_c_id integer;
         dup_cf_id integer;
         cond boolean;
+        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
+        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
+
         cond:= TG_OP = 'INSERT'; IF NOT cond THEN cond:= NEW.name IS DISTINCT FROM OLD.name; END IF;
         IF cond THEN
                 dup_c_id:= NULL;
@@ -296,7 +348,7 @@ BEGIN
                         END IF;
                 END IF;
         END IF;
-        
+
         co:= get_code(FALSE, make_acodekeyl_byid(NEW.code_id));
 
         IF co.code_type != 'plain code' THEN
@@ -317,6 +369,7 @@ BEGIN
                 END IF;
         END IF;
 
+        PERFORM leave_schema_namespace(namespace_info);
         RETURN NEW;
 END;
 $codes_names_onmodify$ LANGUAGE plpgsql;
@@ -328,6 +381,6 @@ CREATE TRIGGER tri_codes_names_onmodify AFTER INSERT OR UPDATE ON sch_<<$app_nam
 -- GRANT ...
 
 -- Sometimes we want to insert some data, before creating triggers.
-\i ../data/data.sql 
+\i ../data/data.sql
 
 -- CREATE TRIGGER ...

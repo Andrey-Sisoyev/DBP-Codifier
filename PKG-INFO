@@ -3,7 +3,7 @@ Description:
       Tables "codes" and "codifiers" for storing standard sets 
       of constat values, status sets, etc. F.e., codifier "Colors" may contain
       codes: "Red", "Green", "Blue". 
-Version: 0.4
+Version: 0.5
 License: BSD3
 Copyright: Copyright (c) 2010 Andrejs Sisojevs
 License-File: variant/docs/licence/COPYRIGHT
@@ -13,6 +13,6 @@ Stability: beta
 Homepage: http://github.com/Andrey-Sisoyev/DBP-Codifier
 Category: Database
 Tested-With: ArchLinux, PostgreSQL v8.4
-Depends-On: Name >= 0.2
+Depends-On: -
 Manual-file: HOWTO
 Safe-to-test-with-user-data: FALSE
