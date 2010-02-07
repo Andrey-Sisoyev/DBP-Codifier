@@ -260,6 +260,23 @@ CREATE OR REPLACE FUNCTION generalize_acodekey(par_key t_addressed_code_key) RET
                       );
 $$ LANGUAGE SQL;
 
+CREATE OR REPLACE FUNCTION generalize_codekeyl_wcf(par_cf_codekey t_code_key, par_key t_code_key_by_lng) RETURNS t_addressed_code_key_by_lng AS $$
+        SELECT sch_<<$app_name$>>.make_acodekeyl(
+                        ($2).key_lng
+                      , $1
+                      , ($2).code_key
+                      );
+$$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION generalize_codekey_wcf(par_cf_codekey t_code_key, par_key t_code_key) RETURNS t_addressed_code_key_by_lng AS $$
+        SELECT sch_<<$app_name$>>.make_acodekeyl(
+                        sch_<<$app_name$>>.make_codekey_null()
+                      , $1
+                      , $2
+                      );
+$$ LANGUAGE SQL;
+
+
 --------------------------------------------------------------------------
 
 CREATE TYPE t_code_key_type AS ENUM (
@@ -2040,21 +2057,13 @@ BEGIN
                 FROM (SELECT CASE WHEN codekeyl_type(inp.lng) != 'undef'
                                   THEN code_id_of(
                                                 FALSE
-                                              , make_acodekeyl(
-                                                        (inp.lng).key_lng
-                                                      , make_codekey_bystr('Languages')
-                                                      , (inp.lng).code_key
-                                                      )
+                                              , generalize_codekeyl_wcf(make_codekey_bystr('Languages'), inp.lng)
                                               )
                                   ELSE dflt_lng_c_id
                              END AS lng_of_name
                            , inp.name
                            , code_id_of( FALSE
-                                       , make_acodekeyl(
-                                                (inp.entity).key_lng
-                                              , make_codekey_bystr('Entities')
-                                              , (inp.entity).code_key
-                                              )
+                                       , generalize_codekeyl_wcf(make_codekey_bystr('Entities'), inp.lng)
                                        ) AS entity
                            , inp.description
                       FROM unnest(par_codesnames_array) AS inp
@@ -2068,11 +2077,7 @@ BEGIN
                 FROM (SELECT CASE WHEN codekeyl_type(inp.lng) != 'undef'
                                   THEN code_id_of(
                                                 FALSE
-                                              , make_acodekeyl(
-                                                        (inp.lng).key_lng
-                                                      , make_codekey_bystr('Languages')
-                                                      , (inp.lng).code_key
-                                                      )
+                                              , generalize_codekeyl_wcf(make_codekey_bystr('Languages'), inp.lng)
                                               )
                                   ELSE dflt_lng_c_id
                              END AS lng_of_name
@@ -2134,17 +2139,19 @@ GRANT EXECUTE ON FUNCTION make_acodekeyl_null()TO user_<<$app_name$>>_data_admin
 GRANT EXECUTE ON FUNCTION make_acodekeyl_byid(par_code_id integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION make_acodekeyl_bystr1(par_code_text varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION make_acodekeyl_bystr2(par_codifier_text varchar, par_code_text varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION generalize_codekey(par_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION generalize_codekeyl(par_key t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION generalize_acodekey(par_key t_addressed_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION codekey_type(par_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION acodekey_type(par_key t_addressed_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION codekeyl_type(par_key t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION acodekeyl_type(par_key t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION show_codekey(par_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION show_acodekey(par_key t_addressed_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION show_codekeyl(par_key t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION show_acodekeyl(par_key t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION generalize_codekey(par_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION generalize_codekeyl(par_key t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION generalize_acodekey(par_key t_addressed_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION generalize_codekey_wcf(par_cf_codekey t_code_key, par_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION generalize_codekeyl_wcf(par_cf_codekey t_code_key, par_key t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION codekey_type(par_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION acodekey_type(par_key t_addressed_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION codekeyl_type(par_key t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION acodekeyl_type(par_key t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION mk_name_construction_input(par_lng t_code_key_by_lng, par_name varchar, par_entity t_code_key_by_lng, par_description varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 
 -- Lookup functions:

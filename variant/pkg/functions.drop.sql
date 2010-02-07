@@ -43,17 +43,19 @@ DROP FUNCTION IF EXISTS make_acodekeyl_null();
 DROP FUNCTION IF EXISTS make_acodekeyl_byid(par_code_id integer);
 DROP FUNCTION IF EXISTS make_acodekeyl_bystr1(par_code_text varchar);
 DROP FUNCTION IF EXISTS make_acodekeyl_bystr2(par_codifier_text varchar, par_code_text varchar);
-DROP FUNCTION IF EXISTS generalize_codekey(par_key t_code_key);
-DROP FUNCTION IF EXISTS generalize_codekeyl(par_key t_code_key_by_lng);
-DROP FUNCTION IF EXISTS generalize_acodekey(par_key t_addressed_code_key);
-DROP FUNCTION IF EXISTS codekey_type(par_key t_code_key);
-DROP FUNCTION IF EXISTS acodekey_type(par_key t_addressed_code_key);
-DROP FUNCTION IF EXISTS codekeyl_type(par_key t_code_key_by_lng);
-DROP FUNCTION IF EXISTS acodekeyl_type(par_key t_addressed_code_key_by_lng);
 DROP FUNCTION IF EXISTS show_codekey(par_key t_code_key);
 DROP FUNCTION IF EXISTS show_acodekey(par_key t_addressed_code_key);
 DROP FUNCTION IF EXISTS show_codekeyl(par_key t_code_key_by_lng);
 DROP FUNCTION IF EXISTS show_acodekeyl(par_key t_addressed_code_key_by_lng);
+DROP FUNCTION IF EXISTS generalize_codekey(par_key t_code_key);
+DROP FUNCTION IF EXISTS generalize_codekeyl(par_key t_code_key_by_lng);
+DROP FUNCTION IF EXISTS generalize_acodekey(par_key t_addressed_code_key);
+DROP FUNCTION IF EXISTS generalize_codekey_wcf(par_cf_codekey t_code_key, par_key t_code_key);
+DROP FUNCTION IF EXISTS generalize_codekeyl_wcf(par_cf_codekey t_code_key, par_key t_code_key_by_lng);
+DROP FUNCTION IF EXISTS codekey_type(par_key t_code_key);
+DROP FUNCTION IF EXISTS acodekey_type(par_key t_addressed_code_key);
+DROP FUNCTION IF EXISTS codekeyl_type(par_key t_code_key_by_lng);
+DROP FUNCTION IF EXISTS acodekeyl_type(par_key t_addressed_code_key_by_lng);
 DROP FUNCTION IF EXISTS mk_name_construction_input(par_lng t_code_key_by_lng, par_name varchar, par_entity t_code_key_by_lng, par_description varchar);
 
 -- Lookup functions:

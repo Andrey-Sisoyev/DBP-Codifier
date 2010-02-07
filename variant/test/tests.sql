@@ -54,6 +54,9 @@ SELECT show_acodekeyl(generalize_acodekey(make_acodekey_null()));
 SELECT show_acodekeyl(generalize_acodekey(make_acodekey(make_codekey_bystr('Codifier key!'), make_codekey_bystr('Code key!'))));
 SELECT show_acodekeyl(generalize_codekeyl(make_codekeyl_null()));
 SELECT show_acodekeyl(generalize_codekeyl(make_codekeyl(make_codekey_bystr('Language key!'), make_codekey_bystr('Code key!'))));
+SELECT show_acodekeyl(generalize_codekey_wcf(make_codekey_bystr('Languages'), make_codekey_bystr('eng')));
+SELECT show_acodekeyl(generalize_codekeyl_wcf(make_codekey_bystr('Languages'), make_codekeyl_bystr('eng')));
+
 
 \echo >>>>>Type of code_key
 SELECT 'undef'            = codekey_type(make_codekey_null());
