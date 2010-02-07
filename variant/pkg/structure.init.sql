@@ -102,7 +102,7 @@ CREATE TABLE named_in_languages (
 COMMENT ON TABLE named_in_languages IS
 'A general template for child-tables of "named_in_languages":
 ======================================================
-CREATE TABLE <your_object>_names (
+CREATE TABLE <your_object>s_names (
         <your_object>_id integer NOT NULL
       , PRIMARY KEY (<your_object>_id, lng_of_name)
       , FOREIGN KEY (<your_object>_id) REFERENCES <your_object>s(<your_object>_id)
@@ -120,9 +120,9 @@ SELECT new_code_by_userseqs(
               , ''sch_<<$app_name$>>.entities_ids_seq''
               ) AS <your_object>_entity_id;
 
-ALTER TABLE <your_object>_names ALTER COLUMN entity SET DEFAULT code_id_of_entity(''<your_object>'');
+ALTER TABLE <your_object>s_names ALTER COLUMN entity SET DEFAULT code_id_of_entity(''<your_object>'');
 ======================================================
-Notice: if you inherit from both "names" and "named_in_languages", then it''s better to use "<your_object>_names_in_lngs" instead of "<your_object>_names" for child-tables of "named_in_languages".
+Notice: if you inherit from both "names" and "named_in_languages", then it''s better to use "<your_object>s_names_in_lngs" instead of "<your_object>s_names" for child-tables of "named_in_languages".
 ';
 
 CREATE TABLE codes_names (
