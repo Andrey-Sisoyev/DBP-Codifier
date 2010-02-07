@@ -90,6 +90,16 @@ SELECT new_code_by_userseqs(ROW ('eng', 'plain code' :: code_type) :: code_const
      , new_code_by_userseqs(ROW ('fra', 'plain code' :: code_type) :: code_construction_input, make_codekeyl_bystr('Languages'), FALSE, '', 'languages_ids_seq') AS fra_id
      , new_code_by_userseqs(ROW ('deu', 'plain code' :: code_type) :: code_construction_input, make_codekeyl_bystr('Languages'), FALSE, '', 'languages_ids_seq') AS deu_id
      ;
+SELECT bind_code_to_codifier(
+                make_acodekeyl_bystr2('Common nominal codes', 'undefined')
+              , make_codekeyl_bystr('Languages')
+              , TRUE
+              )
+     , bind_code_to_codifier(
+                make_acodekeyl_bystr2('Common nominal codes set', 'unclassified')
+              , make_codekeyl_bystr('Languages')
+              , TRUE
+              );
 
 SELECT new_code_by_userseqs(ROW ('code', 'plain code' :: code_type) :: code_construction_input, make_codekeyl_bystr('Entities'), FALSE, '', 'entities_ids_seq') AS code_entity_id;
 
