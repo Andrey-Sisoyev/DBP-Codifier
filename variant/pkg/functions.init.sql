@@ -805,7 +805,7 @@ CREATE OR REPLACE FUNCTION code_id_of_language(lng_code_text varchar) RETURNS in
 $$ LANGUAGE SQL;
 
 CREATE OR REPLACE FUNCTION code_id_of_entity(entity_code_text varchar) RETURNS integer AS $$
-        SELECT sch_<<$app_name$>>.code_id_of(FALSE, sch_<<$app_name$>>.make_acodekeyl_bystr2('Entities', $1));
+        SELECT sch_<<$app_name$>>.code_id_of(FALSE, sch_<<$app_name$>>.make_acodekeyl_bystr2('Named entities', $1));
 $$ LANGUAGE SQL;
 
 COMMENT ON FUNCTION code_id_of_undefined()       IS 'code_id_of(FALSE, make_acodekeyl_bystr2(''Common nominal codes set'', ''undefined''))';
@@ -813,7 +813,7 @@ COMMENT ON FUNCTION code_id_of_unclassified()    IS 'code_id_of(FALSE, make_acod
 COMMENT ON FUNCTION code_id_of_error()           IS 'code_id_of(FALSE, make_acodekeyl_bystr2(''Common nominal codes set'', ''error''))';
 COMMENT ON FUNCTION code_id_of_ambiguous()       IS 'code_id_of(FALSE, make_acodekeyl_bystr2(''Common nominal codes set'', ''ambiguous''))';
 COMMENT ON FUNCTION code_id_of_language(varchar) IS 'code_id_of(FALSE, make_acodekeyl_bystr2(''Languages'', $1))';
-COMMENT ON FUNCTION code_id_of_entity(varchar) IS 'code_id_of(FALSE, make_acodekeyl_bystr2(''Entities'', $1))';
+COMMENT ON FUNCTION code_id_of_entity(varchar) IS 'code_id_of(FALSE, make_acodekeyl_bystr2(''Named entities'', $1))';
 
 -------------------------------------------------------------------------------
 
@@ -2022,7 +2022,7 @@ BEGIN
                              END AS lng_of_name
                            , inp.name
                            , code_id_of( FALSE
-                                       , generalize_codekeyl_wcf(make_codekey_bystr('Entities'), inp.lng)
+                                       , generalize_codekeyl_wcf(make_codekey_bystr('Named entities'), inp.lng)
                                        ) AS entity
                            , inp.description
                       FROM unnest(par_codesnames_array) AS inp

@@ -75,7 +75,7 @@ SELECT new_codifier_w_subcodes(
 
 SELECT new_codifier_w_subcodes(
           make_codekeyl_bystr('System codifiers')      -- parent of codifier
-        , ROW ('Entities', 'codifier' :: code_type) :: code_construction_input   -- new codifier
+        , ROW ('Named entities', 'codifier' :: code_type) :: code_construction_input   -- new codifier
         , NULL            :: varchar                   -- default code
         , VARIADIC ARRAY[
 	                ] :: code_construction_input[] -- subcodes
@@ -101,7 +101,7 @@ SELECT bind_code_to_codifier(
               , FALSE
               );
 
-SELECT new_code_by_userseqs(ROW ('code', 'plain code' :: code_type) :: code_construction_input, make_codekeyl_bystr('Entities'), FALSE, '', 'entities_ids_seq') AS code_entity_id;
+SELECT new_code_by_userseqs(ROW ('code', 'plain code' :: code_type) :: code_construction_input, make_codekeyl_bystr('Named entities'), FALSE, '', 'namentities_ids_seq') AS code_entity_id;
 
 SELECT add_code_lng_names(FALSE, make_acodekeyl_bystr1('Root')                                         , VARIADIC ARRAY[ mk_name_construction_input(make_codekeyl_bystr('eng'), 'Root'                     , make_codekeyl_null(), 'The root codifier of all codes and codifiers.') ] )
      , add_code_lng_names(FALSE, make_acodekeyl_bystr2('Root', 'Usual codifiers')                      , VARIADIC ARRAY[ mk_name_construction_input(make_codekeyl_bystr('eng'), 'Usual codifiers'          , make_codekeyl_null(), 'Directory of usual codifiers.') ] )
@@ -111,7 +111,7 @@ SELECT add_code_lng_names(FALSE, make_acodekeyl_bystr1('Root')                  
 
      , add_code_lng_names(FALSE, make_acodekeyl_bystr2('System codifiers', 'Common nominal codes set') , VARIADIC ARRAY[ mk_name_construction_input(make_codekeyl_bystr('eng'), 'Common nominal codes set' , make_codekeyl_null(), 'Codifier of codes generally shared by lots of different codifiers.') ] )
      , add_code_lng_names(FALSE, make_acodekeyl_bystr2('System codifiers', 'Languages')                , VARIADIC ARRAY[ mk_name_construction_input(make_codekeyl_bystr('eng'), 'Languages'                , make_codekeyl_null(), E'Codifier of languages. Originally thought to be filled with ISO 639-3 codes, but not constrainted to. Nonnatural languages it is recommended to put in a subdirectory (create it yourself). However (es for v0.5 of Codifier package), the function is not yet provided that would check, if code belongs to codifier across more than 1 level, but it will be written soon.\nTo add new language use following function call template: "SELECT new_code_by_userseqs(ROW (''<your_language>'', ''plain code'' :: code_type) :: code_construction_input, make_codekeyl_bystr(''Languages''), FALSE, '''', ''languages_ids_seq'') AS new_language_id";') ] )
-     , add_code_lng_names(FALSE, make_acodekeyl_bystr2('System codifiers', 'Entities')                 , VARIADIC ARRAY[ mk_name_construction_input(make_codekeyl_bystr('eng'), 'Entities'                 , make_codekeyl_null(), E'Codifier of entities. Used in table "names" and by it''s ancestors.To add new language use following function call template: "SELECT new_code_by_userseqs(ROW (''<your_entity>'', ''plain code'' :: code_type) :: code_construction_input, make_codekeyl_bystr(''Entities''), FALSE, '''', ''entities_ids_seq'') AS new_entity_id;"') ] )
+     , add_code_lng_names(FALSE, make_acodekeyl_bystr2('System codifiers', 'Named entities')           , VARIADIC ARRAY[ mk_name_construction_input(make_codekeyl_bystr('eng'), 'Named entities'           , make_codekeyl_null(), E'Codifier of named entities. Used in table "names" and by it''s ancestors.To add new language use following function call template: "SELECT new_code_by_userseqs(ROW (''<your_entity>'', ''plain code'' :: code_type) :: code_construction_input, make_codekeyl_bystr(''Entities''), FALSE, '''', ''namentities_ids_seq'') AS new_entity_id;"') ] )
 
      , add_code_lng_names(FALSE, make_acodekeyl_bystr2('Common nominal codes set', 'undefined')        , VARIADIC ARRAY[ mk_name_construction_input(make_codekeyl_bystr('eng'), 'undefined'                , make_codekeyl_null(), 'To be usable in codifiers, that allow users not to determine code.') ] )
      , add_code_lng_names(FALSE, make_acodekeyl_bystr2('Common nominal codes set', 'unclassified')     , VARIADIC ARRAY[ mk_name_construction_input(make_codekeyl_bystr('eng'), 'unclassified'             , make_codekeyl_null(), 'To be usable in codifiers, that do not cover all possible codes, and allow not covered cases. Usage of such codes shows up cases, when better classification of domain area objects could be performed.') ] )
@@ -129,6 +129,6 @@ SELECT add_code_lng_names(FALSE, make_acodekeyl_bystr1('Root')                  
      , add_code_lng_names(FALSE, make_acodekeyl_bystr2('Languages', 'deu')                             , VARIADIC ARRAY[ mk_name_construction_input(make_codekeyl_bystr('eng'), 'deu'                      , make_codekeyl_null(), 'German language code from ISO 639-3.' )
                                                                                                                        , mk_name_construction_input(make_codekeyl_bystr('rus'), 'нем'                      , make_codekeyl_null(), 'Код-аббревиатура немецкого языка.'    ) ] )
 
-     , add_code_lng_names(FALSE, make_acodekeyl_bystr2('Entities', 'code')                             , VARIADIC ARRAY[ mk_name_construction_input(make_codekeyl_bystr('eng'), 'code'                     , make_codekeyl_null(), 'Code is an entity of this DB used for making tree-like graphs of constants. The branch that has leafs and other subbranches is called codifier, the code that has only subbranches and no lefs - metacodifier, the code that can''t have any substructures is called "plain code".') ] )
+     , add_code_lng_names(FALSE, make_acodekeyl_bystr2('Named entities', 'code')                       , VARIADIC ARRAY[ mk_name_construction_input(make_codekeyl_bystr('eng'), 'code'                     , make_codekeyl_null(), 'Code is an entity of this DB used for making tree-like graphs of constants. The branch that has leafs and other subbranches is called codifier, the code that has only subbranches and no lefs - metacodifier, the code that can''t have any substructures is called "plain code".') ] )
      ;
 

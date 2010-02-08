@@ -58,6 +58,6 @@ DROP TABLE IF EXISTS codes;
 DROP SEQUENCE IF EXISTS codifiers_ids_seq;
 DROP SEQUENCE IF EXISTS plain_codes_ids_seq;
 DROP SEQUENCE IF EXISTS languages_ids_seq;
-DROP SEQUENCE IF EXISTS entities_ids_seq;
+DROP SEQUENCE IF EXISTS namentities_ids_seq;
 
 DROP TYPE IF EXISTS code_type CASCADE;

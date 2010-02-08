@@ -74,7 +74,7 @@ CREATE SEQUENCE languages_ids_seq -- WARNING!!! Some alterations are there in th
         NO CYCLE;
 
 -- one hunded sch_<<$app_name$>>.codes reserved for the most fundamental codifiers roots
-CREATE SEQUENCE entities_ids_seq
+CREATE SEQUENCE namentities_ids_seq
         INCREMENT BY 1
         MINVALUE 9500
         MAXVALUE 9999
@@ -95,8 +95,8 @@ CREATE RULE names_ins_protection AS ON UPDATE TO names DO INSTEAD NOTHING;
 CREATE RULE names_ins_protection AS ON DELETE TO names DO INSTEAD NOTHING;
 
 COMMENT ON TABLE named IS
-'The table is totally abstract - you can''t INSERT, UPDATE or DELETE in it, 
-but use it as an ancestor in your child-tables, that need name, description 
+'The table is totally abstract - you can''t INSERT, UPDATE or DELETE in it,
+but use it as an ancestor in your child-tables, that need name, description
 and/or comments.';
 
 -------------------------------------
@@ -113,8 +113,8 @@ CREATE RULE lngnames_ins_protection AS ON UPDATE TO names_in_languages DO INSTEA
 CREATE RULE lngnames_ins_protection AS ON DELETE TO names_in_languages DO INSTEAD NOTHING;
 
 COMMENT ON TABLE named_in_languages IS
-'The table is totally abstract - you can''t INSERT, UPDATE or DELETE in it, 
-but use it as an ancestor in your child-tables, that need name, description 
+'The table is totally abstract - you can''t INSERT, UPDATE or DELETE in it,
+but use it as an ancestor in your child-tables, that need name, description
 and/or comments in different languages.
 
 A general template for child-tables of "named_in_languages":
@@ -131,10 +131,10 @@ CREATE TABLE <your_object>s_names (
 
 SELECT new_code_by_userseqs(
                 ROW (''<your_object>'', ''plain code'' :: code_type) :: code_construction_input
-              , make_codekeyl_bystr(''Entities'')
+              , make_codekeyl_bystr(''Named entities'')
               , FALSE
               , ''''
-              , ''sch_<<$app_name$>>.entities_ids_seq''
+              , ''sch_<<$app_name$>>.namentities_ids_seq''
               ) AS <your_object>_entity_id;
 
 ALTER TABLE <your_object>s_names ALTER COLUMN entity SET DEFAULT code_id_of_entity(''<your_object>'');
@@ -165,7 +165,7 @@ ALTER TABLE names
                                 FALSE
                               , make_acodekeyl(
                                           make_codekey_null()
-                                        , make_codekey_bystr('Entities')
+                                        , make_codekey_bystr('Named entities')
                                         , make_codekey_byid(entity)
                       )         )       );
 
@@ -184,7 +184,7 @@ ALTER TABLE named_in_languages
 GRANT USAGE ON SEQUENCE codifiers_ids_seq   TO user_<<$app_name$>>_data_admin;
 GRANT USAGE ON SEQUENCE plain_codes_ids_seq TO user_<<$app_name$>>_data_admin;
 GRANT USAGE ON SEQUENCE languages_ids_seq   TO user_<<$app_name$>>_data_admin;
-GRANT USAGE ON SEQUENCE entities_ids_seq    TO user_<<$app_name$>>_data_admin;
+GRANT USAGE ON SEQUENCE namentities_ids_seq TO user_<<$app_name$>>_data_admin;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE codes              TO user_<<$app_name$>>_data_admin;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE codes_names        TO user_<<$app_name$>>_data_admin;
