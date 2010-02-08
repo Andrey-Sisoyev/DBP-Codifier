@@ -87,14 +87,15 @@ CREATE TABLE names (
        , description varchar     NULL
        , entity      integer NOT NULL
        , comments    varchar     NULL
-       , FOREIGN KEY (entity) REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
+       -- , FOREIGN KEY (entity) REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
+       -- Note: had to choose - either this FK, or RULE "names_upd_protection"
 ) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
 
 CREATE RULE names_ins_protection AS ON INSERT TO names DO INSTEAD NOTHING;
-CREATE RULE names_ins_protection AS ON UPDATE TO names DO INSTEAD NOTHING;
-CREATE RULE names_ins_protection AS ON DELETE TO names DO INSTEAD NOTHING;
+CREATE RULE names_upd_protection AS ON UPDATE TO names DO INSTEAD NOTHING;
+CREATE RULE names_del_protection AS ON DELETE TO names DO INSTEAD NOTHING;
 
-COMMENT ON TABLE named IS
+COMMENT ON TABLE names IS
 'The table is totally abstract - you can''t INSERT, UPDATE or DELETE in it,
 but use it as an ancestor in your child-tables, that need name, description
 and/or comments.';
@@ -103,14 +104,15 @@ and/or comments.';
 
 CREATE TABLE named_in_languages (
           lng_of_name integer
-        , FOREIGN KEY (lng_of_name) REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
-        , FOREIGN KEY (entity)      REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
+        -- , FOREIGN KEY (lng_of_name) REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
+        -- , FOREIGN KEY (entity)      REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
+        -- Note: had to choose - either these FKs, or RULE "lngnames_upd_protection"
 ) INHERITS (names)
   TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
 
-CREATE RULE lngnames_ins_protection AS ON INSERT TO names_in_languages DO INSTEAD NOTHING;
-CREATE RULE lngnames_ins_protection AS ON UPDATE TO names_in_languages DO INSTEAD NOTHING;
-CREATE RULE lngnames_ins_protection AS ON DELETE TO names_in_languages DO INSTEAD NOTHING;
+CREATE RULE lngnames_ins_protection AS ON INSERT TO named_in_languages DO INSTEAD NOTHING;
+CREATE RULE lngnames_upd_protection AS ON UPDATE TO named_in_languages DO INSTEAD NOTHING;
+CREATE RULE lngnames_del_protection AS ON DELETE TO named_in_languages DO INSTEAD NOTHING;
 
 COMMENT ON TABLE named_in_languages IS
 'The table is totally abstract - you can''t INSERT, UPDATE or DELETE in it,

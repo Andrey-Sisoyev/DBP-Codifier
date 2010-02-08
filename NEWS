@@ -44,3 +44,13 @@ Changes from 0.4 to 0.5
 * Added 2 sequences for codifiers "Languages" (9000-9499) and 
   "Entities" (9500-9999). Also added "new_code" function extension, 
   that accepts used-defined sequence for code ID generation. 
+
+
+Changes from 0.5 to 0.5.1
+--------------------------------------------
+* Added function "optimize_acodekeyl", which grounds any key to contain IDs.
+* Tables "names" and "named_in_languages" are now abstract - one can't 
+  INSERT, UPDATE or DELETE with them. To put it that way, had to 
+  remove FOREIGN KEYs from table "names" and "named_in_languages", because 
+  their ON UPDATE CASCADE rules would conflict 
+  with INSTEAD OF UPDATE DO NOTHING.

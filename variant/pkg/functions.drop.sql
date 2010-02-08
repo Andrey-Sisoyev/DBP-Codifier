@@ -54,6 +54,7 @@ DROP FUNCTION IF EXISTS mk_name_construction_input(par_lng t_code_key_by_lng, pa
 
 -- Lookup functions:
 
+DROP FUNCTION IF EXISTS optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determine_mask integer);
 DROP FUNCTION IF EXISTS code_id_of(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng);
 DROP FUNCTION IF EXISTS code_id_of_undefined();
 DROP FUNCTION IF EXISTS code_id_of_unclassified();
@@ -61,6 +62,7 @@ DROP FUNCTION IF EXISTS code_id_of_error();
 DROP FUNCTION IF EXISTS code_id_of_ambiguous();
 DROP FUNCTION IF EXISTS code_id_of_language(varchar);
 DROP FUNCTION IF EXISTS code_id_of_entity(entity_code_text varchar);
+DROP FUNCTION IF EXISTS codifier_id_of(par_if_exists boolean, par_cf_keyl t_code_key_by_lng);
 DROP FUNCTION IF EXISTS code_belongs_to_codifier(par_if_cf_exists boolean, par_acodekeyl t_addressed_code_key_by_lng);
 DROP FUNCTION IF EXISTS get_code(par_if_exists boolean, par_key t_addressed_code_key_by_lng);
 DROP FUNCTION IF EXISTS codifier_default_code(par_if_exists boolean, par_cf_keyl t_code_key_by_lng);
