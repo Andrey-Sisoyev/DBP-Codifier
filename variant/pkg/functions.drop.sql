@@ -19,12 +19,6 @@ SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
 -- DROP FUNCTION IF EXISTS ...
 -- DROP TYPE     IF EXISTS ...
 
--- Service functions
-
-DROP FUNCTION IF EXISTS enter_schema_namespace();
-DROP FUNCTION IF EXISTS leave_schema_namespace(par_prev_state t_namespace_info);
-DROP FUNCTION IF EXISTS __watch(par_str varchar);
-
 -- Referencing functions:
 
 DROP FUNCTION IF EXISTS make_codekey(par_code_id integer, par_code_text varchar);
@@ -103,7 +97,7 @@ DROP TYPE IF EXISTS t_addressed_code_key_by_lng;
 DROP TYPE IF EXISTS t_code_key_by_lng;
 DROP TYPE IF EXISTS t_addressed_code_key;
 DROP TYPE IF EXISTS t_code_key;
-DROP TYPE IF EXISTS t_namespace_info;
+
 
 
 

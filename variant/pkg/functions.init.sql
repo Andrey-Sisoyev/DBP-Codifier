@@ -16,48 +16,7 @@ SELECT set_config('client_min_messages', 'NOTICE', FALSE);
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
--- Service functions:
-
-CREATE TYPE t_namespace_info AS (prev_search_path varchar, sp_changed boolean);
-
-CREATE OR REPLACE FUNCTION enter_schema_namespace() RETURNS sch_<<$app_name$>>.t_namespace_info AS $$
-DECLARE
-        prev_search_path varchar;
-        sp_changed boolean:= FALSE;
-        r sch_<<$app_name$>>.t_namespace_info;
-BEGIN
-        SELECT current_setting('search_path') INTO prev_search_path;
-        IF prev_search_path NOT LIKE 'sch_<<$app_name$>>%' THEN
-                PERFORM set_config('search_path', 'sch_<<$app_name$>>,' || prev_search_path, TRUE);
-                sp_changed:= TRUE;
-        END IF;
-        r.prev_search_path:= prev_search_path; r.sp_changed:= sp_changed;
-        RETURN r;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION leave_schema_namespace(par_prev_state sch_<<$app_name$>>.t_namespace_info) RETURNS VOID AS $$
-BEGIN
-        IF par_prev_state.sp_changed THEN
-                PERFORM set_config('search_path', par_prev_state.prev_search_path, TRUE);
-        END IF;
-        RETURN;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION __watch(par_str varchar) RETURNS integer AS $$
-BEGIN
-        RAISE WARNING '__watch: %', par_str;
-        RETURN 0;
-END;
-$$ LANGUAGE plpgsql;
-
-
---------------------------------------------------------------------------
---------------------------------------------------------------------------
---------------------------------------------------------------------------
 -- Referencing functions:
-
 
 CREATE TYPE t_code_key                  AS (code_id integer, code_text varchar);
 CREATE TYPE t_addressed_code_key        AS (codifier_key t_code_key, code_key t_code_key);
@@ -2114,12 +2073,6 @@ Hint: use this function source code as a template for your child-tables inheriti
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
-
--- Service functions
-
-GRANT EXECUTE ON FUNCTION enter_schema_namespace()TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION leave_schema_namespace(par_prev_state t_namespace_info)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION __watch(par_str varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 
 -- Referencing functions:
 
