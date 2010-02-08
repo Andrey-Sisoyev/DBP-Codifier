@@ -39,7 +39,17 @@ DROP INDEX IF EXISTS codifiers_idx;
 DROP INDEX IF EXISTS codestexts_in_codes_idx;
 
 DROP TABLE IF EXISTS codes_names;
+
+DROP RULE  IF EXISTS lngnames_ins_protection;
+DROP RULE  IF EXISTS lngnames_upd_protection;
+DROP RULE  IF EXISTS lngnames_del_protection;
+
 DROP TABLE IF EXISTS named_in_languages;
+
+DROP RULE  IF EXISTS names_ins_protection;
+DROP RULE  IF EXISTS names_upd_protection;
+DROP RULE  IF EXISTS names_del_protection;
+
 DROP TABLE IF EXISTS names;
 
 DROP TABLE IF EXISTS codes_tree;

@@ -90,6 +90,15 @@ CREATE TABLE names (
        , FOREIGN KEY (entity) REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
 
+CREATE RULE names_ins_protection AS ON INSERT TO names DO INSTEAD NOTHING;
+CREATE RULE names_ins_protection AS ON UPDATE TO names DO INSTEAD NOTHING;
+CREATE RULE names_ins_protection AS ON DELETE TO names DO INSTEAD NOTHING;
+
+COMMENT ON TABLE named IS
+'The table is totally abstract - you can''t INSERT, UPDATE or DELETE in it, 
+but use it as an ancestor in your child-tables, that need name, description 
+and/or comments.';
+
 -------------------------------------
 
 CREATE TABLE named_in_languages (
@@ -99,8 +108,16 @@ CREATE TABLE named_in_languages (
 ) INHERITS (names)
   TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
 
+CREATE RULE lngnames_ins_protection AS ON INSERT TO names_in_languages DO INSTEAD NOTHING;
+CREATE RULE lngnames_ins_protection AS ON UPDATE TO names_in_languages DO INSTEAD NOTHING;
+CREATE RULE lngnames_ins_protection AS ON DELETE TO names_in_languages DO INSTEAD NOTHING;
+
 COMMENT ON TABLE named_in_languages IS
-'A general template for child-tables of "named_in_languages":
+'The table is totally abstract - you can''t INSERT, UPDATE or DELETE in it, 
+but use it as an ancestor in your child-tables, that need name, description 
+and/or comments in different languages.
+
+A general template for child-tables of "named_in_languages":
 ======================================================
 CREATE TABLE <your_object>s_names (
         <your_object>_id integer NOT NULL
