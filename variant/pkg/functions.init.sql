@@ -538,7 +538,122 @@ COMMENT ON FUNCTION acodekeyl_type(par_key t_addressed_code_key_by_lng) IS
 Doesn''t return NULL.
 ';
 
---------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION optimized_codekey_isit(par_codekey t_code_key) RETURNS boolean AS $$
+        SELECT sch_<<$app_name$>>.codekey_type($1) = 'c_id';
+$$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION optimized_acodekey_isit(par_acodekey t_addressed_code_key, par_opt_mask integer) RETURNS boolean AS $$
+DECLARE
+        ctype sch_<<$app_name$>>.t_code_key_type;
+        r boolean;
+        namespace_info sch_<<$app_name$>>.t_namespace_info;
+BEGIN
+        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
+
+        IF par_opt_mask = 0 THEN
+                PERFORM leave_schema_namespace(namespace_info);
+                RETURN TRUE;
+        ELSIF par_opt_mask NOT IN (1,2,3) THEN
+                RAISE EXCEPTION 'An error occurred in function "optimized_acodekey_isit"! Bad mask.';
+        END IF;
+
+        ctype:= acodekey_type(par_acodekey);
+        IF ctype = 'undef' THEN
+                PERFORM leave_schema_namespace(namespace_info);
+                RETURN FALSE;
+        END IF;
+        r:=     ((mod(par_opt_mask     , 2) = 0) OR (ctype = 'c_id'))
+            AND ((mod(par_opt_mask >> 1, 2) = 0) OR (codekey_type(par_acodekey.codifier_key) = 'c_id'));
+        PERFORM leave_schema_namespace(namespace_info);
+        RETURN r;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION optimized_acodekey_isit(par_acodekey t_addressed_code_key, par_opt_mask integer) IS
+'Parameter "par_opt_mask" is a bit-mask:
+(0) code key is checked to be defined by ID;
+(1) codifier key is checked to be defined by ID;
+(rest) not used.
+.
+Doesn''t return NULL.
+';
+
+CREATE OR REPLACE FUNCTION optimized_codekeyl_isit(par_codekeyl t_code_key_by_lng, par_opt_mask integer) RETURNS boolean AS $$
+DECLARE
+        ctype sch_<<$app_name$>>.t_code_key_type;
+        r boolean;
+        namespace_info sch_<<$app_name$>>.t_namespace_info;
+BEGIN
+        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
+
+        IF par_opt_mask = 0 THEN
+                PERFORM leave_schema_namespace(namespace_info);
+                RETURN TRUE;
+        ELSIF par_opt_mask NOT IN (1,4,5) THEN
+                RAISE EXCEPTION 'An error occurred in function "optimized_codekeyl_isit"! Bad mask.';
+        END IF;
+
+        ctype:= codekeyl_type(par_codekeyl);
+        IF ctype = 'undef' THEN
+                PERFORM leave_schema_namespace(namespace_info);
+                RETURN FALSE;
+        END IF;
+        r:=     ((mod(par_opt_mask     , 2) = 0) OR (ctype = 'c_id'))
+            AND ((mod(par_opt_mask >> 2, 2) = 0) OR (codekey_type(par_codekeyl.key_lng) = 'c_id'));
+        PERFORM leave_schema_namespace(namespace_info);
+        RETURN r;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION optimized_codekeyl_isit(par_codekeyl t_code_key_by_lng, par_opt_mask integer) IS
+'Parameter "par_opt_mask" is a bit-mask:
+(0) code key is checked to be defined by ID;
+(1) not used;
+(2) language key is checked to be defined by ID;
+(rest) not used.
+.
+Doesn''t return NULL.
+';
+
+CREATE OR REPLACE FUNCTION optimized_acodekeyl_isit(par_acodekeyl t_addressed_code_key_by_lng, par_opt_mask integer) RETURNS boolean AS $$
+DECLARE
+        ctype sch_<<$app_name$>>.t_code_key_type;
+        r boolean;
+        namespace_info sch_<<$app_name$>>.t_namespace_info;
+BEGIN
+        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
+
+        IF par_opt_mask = 0 THEN
+                PERFORM leave_schema_namespace(namespace_info);
+                RETURN TRUE;
+        ELSIF par_opt_mask > 7 OR par_opt_mask < 0 THEN
+                RAISE EXCEPTION 'An error occurred in function "optimized_acodekeyl_isit"! Bad mask.';
+        END IF;
+
+        ctype:= acodekeyl_type(par_acodekeyl);
+        IF ctype = 'undef' THEN
+                PERFORM leave_schema_namespace(namespace_info);
+                RETURN FALSE;
+        END IF;
+        r:=     ((mod(par_opt_mask     , 2) = 0) OR (ctype = 'c_id'))
+            AND ((mod(par_opt_mask >> 1, 2) = 0) OR (codekey_type(par_acodekeyl.codifier_key) = 'c_id'))
+            AND ((mod(par_opt_mask >> 2, 2) = 0) OR (codekey_type(par_acodekeyl.key_lng) = 'c_id'));
+        PERFORM leave_schema_namespace(namespace_info);
+        RETURN r;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION optimized_acodekeyl_isit(par_acodekeyl t_addressed_code_key_by_lng, par_opt_mask integer) IS
+'Parameter "par_opt_mask" is a bit-mask:
+(0) code key is checked to be defined by ID;
+(1) codifier key is checked to be defined by ID;
+(2) language key is checked to be defined by ID;
+(rest) not used.
+.
+Doesn''t return NULL.
+';
 
 --------------------------------------------------------------------------
 
@@ -2649,6 +2764,10 @@ GRANT EXECUTE ON FUNCTION make_acodekeyl_null()TO user_<<$app_name$>>_data_admin
 GRANT EXECUTE ON FUNCTION make_acodekeyl_byid(par_code_id integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION make_acodekeyl_bystr1(par_code_text varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION make_acodekeyl_bystr2(par_codifier_text varchar, par_code_text varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimized_codekey_isit(par_codekey t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimized_acodekey_isit(par_acodekey t_addressed_code_key, par_opt_mask integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimized_codekeyl_isit(par_codekeyl t_code_key_by_lng, par_opt_mask integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimized_acodekeyl_isit(par_acodekeyl t_addressed_code_key_by_lng, par_opt_mask integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION show_codekey(par_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION show_acodekey(par_key t_addressed_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION show_codekeyl(par_key t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;

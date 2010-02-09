@@ -54,3 +54,7 @@ Changes from 0.5 to 0.5.1
   remove FOREIGN KEYs from table "names" and "named_in_languages", because 
   their ON UPDATE CASCADE rules would conflict 
   with INSTEAD OF UPDATE DO NOTHING.
+
+Changes from 0.5.1 to 0.5.2
+--------------------------------------------
+* Added functions "optimized_[a]codekey[l]_isit".
