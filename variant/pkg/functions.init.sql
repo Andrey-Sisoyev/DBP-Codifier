@@ -761,6 +761,7 @@ DECLARE
         v_codifier_id    integer:= NULL;
         v_code_id        integer:= NULL;
         test             boolean;
+        allow_insufficient_key boolean:= FALSE;
         rows_count       integer:= -1;
         namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
@@ -779,36 +780,23 @@ BEGIN
         v_acodekeyl_type := acodekeyl_type(v_acodekeyl);
         CASE v_acodekeyl_type
             WHEN 'undef' THEN
-                IF (mod(par_determine_mask, 8) != 0) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask, 8) != 0) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Determination command is given, but key is undefined.', show_acodekeyl(v_acodekeyl);
                 END IF;
             WHEN 'c_id' THEN
                 v_codekey_type := codekey_type(v_acodekeyl.codifier_key);
-                IF v_codekey_type = 'c_id' AND NOT par_ifexists THEN
-                        SELECT TRUE
-                        INTO test
-                        FROM codes_tree
-                        WHERE supercode_id = (v_acodekeyl.codifier_key).code_id
-                          AND subcode_id   = (v_acodekeyl.code_key).code_id;
-
-                        GET DIAGNOSTICS rows_count = ROW_COUNT;
-
-                        IF NOT (rows_count = 1) THEN
-                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
-                        END IF;
-                END IF;
 
                 IF mod(par_determine_mask >> 1, 2) = 1 THEN -- if codifier to be determined
                         CASE v_codekey_type
                             WHEN 'undef'         THEN
-                                IF NOT par_ifexists THEN
+                                IF NOT allow_insufficient_key THEN
                                     RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Codifier is commanded to be determined, but no codifier is specified (code may belong to multiple codifiers)(1).', show_acodekeyl(v_acodekeyl);
                                 END IF;
                             WHEN 'c_id'          THEN
                                 IF mod(par_determine_mask >> 2, 2) = 1 THEN -- if language to be determined
                                         CASE codekey_type(v_acodekeyl.key_lng)
                                             WHEN 'undef' THEN
-                                                IF NOT par_ifexists THEN
+                                                IF NOT allow_insufficient_key THEN
                                                     RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Language is commanded to be determined, but no language is specified(1).', show_acodekeyl(v_acodekeyl);
                                                 END IF;
                                             WHEN 'c_id' THEN
@@ -825,7 +813,7 @@ BEGIN
                                 CASE codekey_type(v_acodekeyl.key_lng)
                                     WHEN 'undef' THEN
                                         IF mod(par_determine_mask >> 2, 2) = 1 THEN -- if language to be determined
-                                            IF NOT par_ifexists THEN
+                                            IF NOT allow_insufficient_key THEN
                                                 RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Language is commanded to be determined, but no language is specified(2).', show_acodekeyl(v_acodekeyl);
                                             END IF;
                                         END IF;
@@ -905,7 +893,7 @@ BEGIN
                 ELSIF mod(par_determine_mask >> 2, 2) = 1 THEN
                         CASE codekey_type(v_acodekeyl.key_lng)
                             WHEN 'undef' THEN
-                                IF NOT par_ifexists THEN
+                                IF NOT allow_insufficient_key THEN
                                     RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Language is commanded to be determined, but no language is specified(0).', show_acodekeyl(v_acodekeyl);
                                 END IF;
                             WHEN 'c_id' THEN
@@ -918,14 +906,14 @@ BEGIN
                         END CASE;
                 END IF;
             WHEN 'cf_id' THEN
-                IF (mod(par_determine_mask, 2) = 1) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask, 2) = 1) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Code is commanded to be determined, but no identifiable code is specified(0).', show_acodekeyl(v_acodekeyl);
                 END IF;
 
                 IF mod(par_determine_mask >> 2, 2) = 1 THEN
                         CASE codekey_type(v_acodekeyl.key_lng)
                             WHEN 'undef' THEN
-                                IF NOT par_ifexists THEN
+                                IF NOT allow_insufficient_key THEN
                                     RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Language is commanded to be determined, but no language is specified(3).', show_acodekeyl(v_acodekeyl);
                                 END IF;
                             WHEN 'c_id' THEN
@@ -938,11 +926,11 @@ BEGIN
                         END CASE;
                 END IF;
             WHEN 'c_nm (-l,-cf)' THEN
-                IF (mod(par_determine_mask, 8) != 0) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask, 8) != 0) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Determination command is given, but it''s impossible to determine anything with key of type "c_nm (-l,-cf)".', show_acodekeyl(v_acodekeyl);
                 END IF;
             WHEN 'c_nm (-l,+cf_id)' THEN
-                IF (mod(par_determine_mask >> 2, 2) = 1) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask >> 2, 2) = 1) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Language is commanded to be determined, but no language is specified(4).', show_acodekeyl(v_acodekeyl);
                 END IF;
 
@@ -966,7 +954,7 @@ BEGIN
                         END IF;
                 END IF;
             WHEN 'c_nm (-l,+cf_nm)' THEN
-                IF (mod(par_determine_mask >> 2, 2) = 1) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask >> 2, 2) = 1) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Language is commanded to be determined, but no language is specified(5).', show_acodekeyl(v_acodekeyl);
                 END IF;
 
@@ -996,24 +984,24 @@ BEGIN
                         END IF;
                 END IF;
             WHEN 'c_nm (+l_id,-cf)' THEN
-                IF (mod(par_determine_mask, 2) = 1) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask, 2) = 1) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Code is commanded to be determined, but no identifiable code is specified(1).', show_acodekeyl(v_acodekeyl);
                 END IF;
-                IF (mod(par_determine_mask >> 1, 2) = 1) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask >> 1, 2) = 1) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Codifier is commanded to be determined, but no codifier is specified (code may belong to multiple codifiers)(2).', show_acodekeyl(v_acodekeyl);
                 END IF;
             WHEN 'c_nm (+l_nm,-cf)' THEN
-                IF (mod(par_determine_mask, 2) = 1) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask, 2) = 1) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Code is commanded to be determined, but no identifiable code is specified(2).', show_acodekeyl(v_acodekeyl);
                 END IF;
-                IF (mod(par_determine_mask >> 1, 2) = 1) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask >> 1, 2) = 1) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Codifier is commanded to be determined, but no codifier is specified (code may belong to multiple codifiers)(3).', show_acodekeyl(v_acodekeyl);
                 END IF;
 
                 IF mod(par_determine_mask >> 2, 2) = 1 THEN -- if language to be determined
                         CASE codekey_type(v_acodekeyl.key_lng)
                             WHEN 'undef' THEN
-                                IF NOT par_ifexists THEN
+                                IF NOT allow_insufficient_key THEN
                                     RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Language is commanded to be determined, but no language is specified(3).', show_acodekeyl(v_acodekeyl);
                                 END IF;
                             WHEN 'c_id' THEN
@@ -1026,10 +1014,10 @@ BEGIN
                         END CASE;
                 END IF;
             WHEN 'cf_nm (-l)' THEN
-                IF (mod(par_determine_mask, 2) = 1) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask, 2) = 1) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Code is commanded to be determined, but no identifiable code is specified(3).', show_acodekeyl(v_acodekeyl);
                 END IF;
-                IF (mod(par_determine_mask >> 2, 2) = 1) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask >> 2, 2) = 1) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Language is commanded to be determined, but no language is specified(6).', show_acodekeyl(v_acodekeyl);
                 END IF;
                 IF (mod(par_determine_mask >> 1, 2) = 1) THEN
@@ -1050,7 +1038,7 @@ BEGIN
                         END IF;
                 END IF;
             WHEN 'cf_nm (+l_id)' THEN
-                IF (mod(par_determine_mask, 2) = 1) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask, 2) = 1) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Code is commanded to be determined, but no identifiable code is specified(4).', show_acodekeyl(v_acodekeyl);
                 END IF;
 
@@ -1075,7 +1063,7 @@ BEGIN
                         END IF;
                 END IF;
             WHEN 'cf_nm (+l_nm)' THEN
-                IF (mod(par_determine_mask, 2) = 1) AND NOT par_ifexists THEN
+                IF (mod(par_determine_mask, 2) = 1) AND NOT allow_insufficient_key THEN
                         RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Code is commanded to be determined, but no identifiable code is specified(5).', show_acodekeyl(v_acodekeyl);
                 END IF;
 
@@ -1278,7 +1266,10 @@ Determination mask bit-map:
 (1) - determine codifier ID
 (2) - determine language ID
 Anyway, if determination mask is 1 then determination of codifier ID and language ID is not obligate. But, if for determination of code ID codifier and/or language are tackled, then their IDs will also be determined.
-Parameter "par_ifexists" if TRUE, then function won''t raise exceptions for 2 types of errors: (1) unable to optimize/verify, because code not found, (2) given key is not sufficiently defined - it''s impossible to satisfy determination mask.
+Parameter "par_ifexists" if TRUE, then function won''t raise exceptions in cases, when unable to find whats needed for determination (addressed by given key) codes tables. However, if for key optimization querying codes table is not needed, then exception won''t be rised anyway.
+But if given key is not sufficiently defined to satisfy determination (requested in mask), then an error will be rised. F.e., language key is requested to be optimized, but it''s given NULL - error.
+
+This function is not for tasks which include the verification: if code addressed by key exists! For such purpose use "code_id_of" function.
 ';
 
 -------------------------------------------------------------------------------
