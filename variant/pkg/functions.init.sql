@@ -762,6 +762,10 @@ DECLARE
         rows_count       integer:= -1;
         namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
+        IF par_determine_mask > 7 OR par_determine_mask < 0 THEN
+                RAISE EXCEPTION 'Unsupported determination mode mask!';
+        END IF;
+
         namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
 
         v_acodekeyl := par_acodekeyl;
@@ -1259,6 +1263,87 @@ Parameter "par_determine_mask" is a bit-mask:
 (rest) not used.
 F.e., to determine code ID and language ID one uses mask 5 (00000101); to determine codifier ID and language ID one uses mask 6 (00000110).
 ';
+
+-------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION optimization_mode_for_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)
+RETURNS integer AS $$
+DECLARE
+        result_mode integer:= 0;
+        v_acodekeyl_type   sch_<<$app_name$>>.t_code_key_type;
+        v_codekey_type     sch_<<$app_name$>>.t_code_key_type:= 'undef';
+        v_codifierkey_type sch_<<$app_name$>>.t_code_key_type:= 'undef';
+        v_lngkey_type      sch_<<$app_name$>>.t_code_key_type:= 'undef';
+BEGIN
+        IF par_determination_preference_mask > 7 OR par_determination_preference_mask < 0 THEN
+                RAISE EXCEPTION 'Unsupported determination preference mask!';
+        END IF;
+        IF par_imperative_or_mask > 7 OR par_imperative_or_mask < 0 THEN
+                RAISE EXCEPTION 'Unsupported determination imperative or-mask!';
+        END IF;
+
+        v_acodekeyl_type := sch_<<$app_name$>>.acodekeyl_type(par_acodekeyl);
+        IF v_acodekeyl_type = 'undef' THEN
+            result_mode:= par_imperative_or_mask;
+        ELSE
+            IF mod(par_determination_preference_mask     , 2) = 1 THEN -- if code to be determined
+                CASE sch_<<$app_name$>>.codekey_type(par_acodekeyl.code_key)
+                    WHEN 'undef' THEN
+                    WHEN 'c_id', 'c_nm (-l,-cf)' THEN result_mode:= 1;
+                    ELSE RAISE EXCEPTION 'Unsupported code key type: "%"!', sch_<<$app_name$>>.codekey_type(par_acodekeyl.code_key);
+                END CASE;
+            END IF;
+
+            IF mod(par_determination_preference_mask >> 1, 2) = 1 THEN -- if codifier to be determined
+                CASE sch_<<$app_name$>>.codekey_type(par_acodekeyl.codifier_key)
+                    WHEN 'undef' THEN
+                    WHEN 'c_id', 'c_nm (-l,-cf)' THEN result_mode:= result_mode + 2;
+                    ELSE RAISE EXCEPTION 'Unsupported codifier key type: "%"!', sch_<<$app_name$>>.codekey_type(par_acodekeyl.codifier_key);
+                END CASE;
+            END IF;
+            IF mod(par_determination_preference_mask >> 2, 2) = 1 THEN -- if language to be determined
+                CASE sch_<<$app_name$>>.codekey_type(par_acodekeyl.key_lng)
+                    WHEN 'undef' THEN
+                    WHEN 'c_id', 'c_nm (-l,-cf)' THEN result_mode:= result_mode + 4;
+                    ELSE RAISE EXCEPTION 'Unsupported language key type: "%"!', sch_<<$app_name$>>.codekey_type(par_acodekeyl.key_lng);
+                END CASE;
+            END IF;
+        END IF;
+
+        result_mode:= result_mode | par_imperative_or_mask;
+
+        RETURN result_mode;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION optimization_mode_for_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer) IS '
+Context:
+1. Whenever you call "optimize_acodekeyl" with mode to determine, say, language - if language key is NULL, then function will raise exception.
+2. The "acodekeyl" is considered to be optimized, whenever code ID is known.
+
+Sometimes we don''t know, if language (or codifier) key persists, and, if it persists, even if code ID is known, we need to determine language code ID.
+Due to condext.(1) we need a way to call "optimize_acodekeyl" with *determination preference*, instead of strict *determination mode*. Preference is less strict, comparing to mode, which is more imperative.
+That''s where subject function steps in - it determines best mode for given acodekeyl and prefernce, that (mode) won''t result in exception, when applied to "optimize_acodekeyl".
+Bitwise OR is applied to resulting *prefered* mode with second operand "par_imperative_or_mask".
+';
+
+-------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer) RETURNS t_addressed_code_key_by_lng AS $$
+        SELECT sch_<<$app_name$>>.optimize_acodekeyl($1, sch_<<$app_name$>>.optimization_mode_for_acodekeyl($1, $2, $3))
+$$ LANGUAGE SQL;
+
+COMMENT ON FUNCTION optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer) IS
+'=sch_<<$app_name$>>.optimize_acodekeyl($1, sch_<<$app_name$>>.optimization_mode_for_acodekeyl($1, $2, $3))';
+
+-----
+
+CREATE OR REPLACE FUNCTION optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng) RETURNS t_addressed_code_key_by_lng AS $$
+        SELECT sch_<<$app_name$>>.optimize_acodekeyl($1, sch_<<$app_name$>>.optimization_mode_for_acodekeyl($1, 7, 1))
+$$ LANGUAGE SQL;
+
+COMMENT ON FUNCTION optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer) IS
+'=SELECT sch_<<$app_name$>>.optimize_acodekeyl($1, sch_<<$app_name$>>.optimization_mode_for_acodekeyl($1, 7, 1))';
 
 -------------------------------------------------------------------------------
 
@@ -2786,6 +2871,9 @@ GRANT EXECUTE ON FUNCTION mk_name_construction_input(par_lng t_code_key_by_lng, 
 -- Lookup functions:
 
 GRANT EXECUTE ON FUNCTION optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determine_mask integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimization_mode_for_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION code_id_of(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION code_id_of_undefined()TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION code_id_of_unclassified()TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;

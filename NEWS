@@ -58,3 +58,11 @@ Changes from 0.5 to 0.5.1
 Changes from 0.5.1 to 0.5.2
 --------------------------------------------
 * Added functions "optimized_[a]codekey[l]_isit".
+
+Changes from 0.5.2 to 0.5.3
+--------------------------------------------
+* Added functions:
+        optimization_mode_for_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)
+        optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)
+        optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng)
+
