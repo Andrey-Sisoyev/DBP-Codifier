@@ -61,8 +61,12 @@ Changes from 0.5.1 to 0.5.2
 
 Changes from 0.5.2 to 0.5.3
 --------------------------------------------
+* Added a parameter on 1st place to function "optimize_acodekeyl": 
+  par_ifexists :: boolean. 
+  Now function may tolerate cases, when code not found and 
+  when given key is insifficient to satisfy determination mask.
 * Added functions:
-        optimization_mode_for_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)
-        optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)
-        optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng)
+     + optimization_mode_for_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)
+     + optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)
+     + optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng)
 
