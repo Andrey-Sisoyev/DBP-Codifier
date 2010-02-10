@@ -580,6 +580,8 @@ COMMENT ON FUNCTION optimized_acodekey_isit(par_acodekey t_addressed_code_key, p
 Doesn''t return NULL.
 ';
 
+--------------
+
 CREATE OR REPLACE FUNCTION optimized_codekeyl_isit(par_codekeyl t_code_key_by_lng, par_opt_mask integer) RETURNS boolean AS $$
 DECLARE
         ctype sch_<<$app_name$>>.t_code_key_type;
@@ -787,7 +789,7 @@ BEGIN
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                         IF NOT (rows_count = 1) THEN
-                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed. Count of rows returned must be 1 but is %.', show_acodekeyl(v_acodekeyl), rows_count;
+                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                         END IF;
                 END IF;
 
@@ -828,7 +830,7 @@ BEGIN
                                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                                         IF NOT (rows_count = 1) THEN
-                                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Codifier not determined (rows returned: %).', show_acodekeyl(v_acodekeyl), rows_count;
+                                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                                         END IF;
 
                                         tmp_codekey := v_acodekeyl.codifier_key;
@@ -847,7 +849,7 @@ BEGIN
                                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                                         IF NOT (rows_count = 1) THEN
-                                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Codifier not determined (rows returned: %).', show_acodekeyl(v_acodekeyl), rows_count;
+                                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                                         END IF;
 
                                         tmp_codekey := v_acodekeyl.codifier_key;
@@ -873,7 +875,7 @@ BEGIN
                                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                                         IF NOT (rows_count = 1) THEN
-                                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Codifier and language not determined (rows returned: %).', show_acodekeyl(v_acodekeyl), rows_count;
+                                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                                         END IF;
 
                                         tmp_codekey := v_acodekeyl.codifier_key;
@@ -941,7 +943,7 @@ BEGIN
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                         IF NOT (rows_count = 1) THEN
-                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Code not determined (rows returned: %).', show_acodekeyl(v_acodekeyl), rows_count;
+                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                         END IF;
 
                         tmp_codekey := v_acodekeyl.code_key;
@@ -967,7 +969,7 @@ BEGIN
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                         IF NOT (rows_count = 1) THEN
-                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Code and codifier not determined (rows returned: %).', show_acodekeyl(v_acodekeyl), rows_count;
+                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                         END IF;
 
                         tmp_codekey := v_acodekeyl.codifier_key;
@@ -1023,7 +1025,7 @@ BEGIN
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                         IF NOT (rows_count = 1) THEN
-                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Codifier not determined (rows returned: %).', show_acodekeyl(v_acodekeyl), rows_count;
+                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                         END IF;
 
                         tmp_codekey := v_acodekeyl.codifier_key;
@@ -1048,7 +1050,7 @@ BEGIN
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                         IF NOT (rows_count = 1) THEN
-                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Codifier not determined (rows returned: %).', show_acodekeyl(v_acodekeyl), rows_count;
+                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                         END IF;
 
                         tmp_codekey := v_acodekeyl.codifier_key;
@@ -1080,7 +1082,7 @@ BEGIN
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                         IF NOT (rows_count = 1) THEN
-                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Codifier and language not determined (rows returned: %).', show_acodekeyl(v_acodekeyl), rows_count;
+                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                         END IF;
 
                         tmp_codekey := v_acodekeyl.codifier_key;
@@ -1105,7 +1107,7 @@ BEGIN
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                         IF NOT (rows_count = 1) THEN
-                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Code not determined (rows returned: %).', show_acodekeyl(v_acodekeyl), rows_count;
+                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                         END IF;
 
                         tmp_codekey := v_acodekeyl.code_key;
@@ -1129,7 +1131,7 @@ BEGIN
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                         IF NOT (rows_count = 1) THEN
-                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Code and codifier not determined (rows returned: %).', show_acodekeyl(v_acodekeyl), rows_count;
+                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                         END IF;
 
                         tmp_codekey := v_acodekeyl.code_key;
@@ -1162,7 +1164,7 @@ BEGIN
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                         IF NOT (rows_count = 1) THEN
-                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Code and language not determined (rows returned: %).', show_acodekeyl(v_acodekeyl), rows_count;
+                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                         END IF;
 
                         tmp_codekey := v_acodekeyl.code_key;
@@ -1197,7 +1199,7 @@ BEGIN
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
                         IF NOT (rows_count = 1) THEN
-                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Code, codifier and language not determined (rows returned: %).', show_acodekeyl(v_acodekeyl), rows_count;
+                                RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                         END IF;
 
                         tmp_codekey := v_acodekeyl.code_key;
@@ -1252,16 +1254,13 @@ COMMENT ON FUNCTION optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng
 By optimizing here is understood making key containing names to contain IDs.
 Such (ID-ed) keys always work faster. The main use case: when you have to do more than 1 action using 1 same key, it''s best to optimize it.
 All functions working with code keys do such optimization - each one it''s own.
-So if you optimize one cey, that is to be used in multiple operations, the summary cost will be less.
+So if you optimize one key, that is to be used in multiple operations, the summary cost will be less.
 
-If input key contains both code ID and codifier ID, and codifier is to be determined, then the check is performed, whether code truly belongs to codifier.
-
-Parameter "par_determine_mask" is a bit-mask:
-(0) code ID must be determined;
-(1) codifier ID must be determined;
-(2) language ID must be determined.
-(rest) not used.
-F.e., to determine code ID and language ID one uses mask 5 (00000101); to determine codifier ID and language ID one uses mask 6 (00000110).
+Determination mask bit-map:
+(0) - determine code ID
+(1) - determine codifier ID
+(2) - determine language ID
+Anyway, if determination mask is 1 then determination of codifier ID and language ID is not obligate. But, if for determination of code ID codifier and/or language are tackled, then their IDs will also be determined.
 ';
 
 -------------------------------------------------------------------------------
@@ -1322,7 +1321,7 @@ Context:
 2. The "acodekeyl" is considered to be optimized, whenever code ID is known.
 
 Sometimes we don''t know, if language (or codifier) key persists, and, if it persists, even if code ID is known, we need to determine language code ID.
-Due to condext.(1) we need a way to call "optimize_acodekeyl" with *determination preference*, instead of strict *determination mode*. Preference is less strict, comparing to mode, which is more imperative.
+Due to <condext.(1)> we need a way to call "optimize_acodekeyl" with *determination preference*, instead of strict *determination mode*. Preference is less strict, comparing to mode, which is more imperative.
 That''s where subject function steps in - it determines best mode for given acodekeyl and prefernce, that (mode) won''t result in exception, when applied to "optimize_acodekeyl".
 Bitwise OR is applied to resulting *prefered* mode with second operand "par_imperative_or_mask".
 ';
@@ -1339,11 +1338,11 @@ COMMENT ON FUNCTION optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng
 -----
 
 CREATE OR REPLACE FUNCTION optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng) RETURNS t_addressed_code_key_by_lng AS $$
-        SELECT sch_<<$app_name$>>.optimize_acodekeyl($1, sch_<<$app_name$>>.optimization_mode_for_acodekeyl($1, 7, 1))
+        SELECT sch_<<$app_name$>>.optimize_acodekeyl($1, sch_<<$app_name$>>.optimization_mode_for_acodekeyl($1, 1, 1))
 $$ LANGUAGE SQL;
 
 COMMENT ON FUNCTION optimize_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer) IS
-'=SELECT sch_<<$app_name$>>.optimize_acodekeyl($1, sch_<<$app_name$>>.optimization_mode_for_acodekeyl($1, 7, 1))';
+'=SELECT sch_<<$app_name$>>.optimize_acodekeyl($1, sch_<<$app_name$>>.optimization_mode_for_acodekeyl($1, 1, 1))';
 
 -------------------------------------------------------------------------------
 
