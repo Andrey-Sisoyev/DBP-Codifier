@@ -768,6 +768,11 @@ BEGIN
                 RAISE EXCEPTION 'Unsupported determination mode mask!';
         END IF;
 
+        IF par_ifexists THEN
+                IF sch_<<$app_name$>>.optimized_acodekeyl_isit(par_acodekeyl, par_determine_mask) THEN
+                        RETURN par_acodekeyl;
+                END IF;
+        END IF;
         namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
 
         v_acodekeyl := par_acodekeyl;
@@ -779,7 +784,7 @@ BEGIN
                 END IF;
             WHEN 'c_id' THEN
                 v_codekey_type := codekey_type(v_acodekeyl.codifier_key);
-                IF v_codekey_type = 'c_id' THEN
+                IF v_codekey_type = 'c_id' AND NOT par_ifexists THEN
                         SELECT TRUE
                         INTO test
                         FROM codes_tree
@@ -788,7 +793,7 @@ BEGIN
 
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
-                        IF NOT (rows_count = 1) AND NOT par_ifexists THEN
+                        IF NOT (rows_count = 1) THEN
                                 RAISE EXCEPTION 'An error occurred in function "optimize_acodekeyl" for code key: %! Verification of code belonging to codifier failed (not found).', show_acodekeyl(v_acodekeyl);
                         END IF;
                 END IF;
