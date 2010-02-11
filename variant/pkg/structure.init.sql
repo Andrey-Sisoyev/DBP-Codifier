@@ -29,16 +29,16 @@ COMMENT ON TYPE code_type IS
 -- one hunded sch_<<$app_name$>>.codes reserved for the most fundamental codifiers roots
 CREATE SEQUENCE codifiers_ids_seq -- WARNING!!! Some alterations are there in the data.sql
         INCREMENT BY 1
-        MINVALUE 100
-        MAXVALUE 8999
-        START WITH 100
+        MINVALUE 1000
+        MAXVALUE 79999 -- 80000-99999 reserved fo languages and nameable entities
+        START WITH 1000
         NO CYCLE;
 
 -- one hunded sch_<<$app_name$>>.codes reserved for the most fundamental codifiers roots
 CREATE SEQUENCE plain_codes_ids_seq
         INCREMENT BY 10
-        MINVALUE 10000
-        START WITH 10000
+        MINVALUE 100000
+        START WITH 100000
         NO CYCLE;
 
 CREATE TABLE codes (
@@ -68,17 +68,17 @@ CREATE INDEX codifiers_idx ON codes_tree(supercode_id) TABLESPACE tabsp_<<$db_na
 -- one hunded sch_<<$app_name$>>.codes reserved for the most fundamental codifiers roots
 CREATE SEQUENCE languages_ids_seq -- WARNING!!! Some alterations are there in the data.sql
         INCREMENT BY 1
-        MINVALUE 9000
-        MAXVALUE 9499
-        START WITH 9000
+        MINVALUE 80000
+        MAXVALUE 89999
+        START WITH 80000
         NO CYCLE;
 
 -- one hunded sch_<<$app_name$>>.codes reserved for the most fundamental codifiers roots
 CREATE SEQUENCE namentities_ids_seq
         INCREMENT BY 1
-        MINVALUE 9500
-        MAXVALUE 9999
-        START WITH 9500
+        MINVALUE 90000
+        MAXVALUE 99999
+        START WITH 90000
         NO CYCLE;
 
 

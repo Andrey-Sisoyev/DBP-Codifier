@@ -23,8 +23,8 @@ SELECT remove_code(TRUE, make_acodekeyl_bystr1('Root'), TRUE, TRUE, FALSE);
 
 INSERT INTO codes (code_id, code_type, code_text) VALUES (0, 'metacodifier', 'Root');
 
-ALTER SEQUENCE codifiers_ids_seq   MINVALUE 1 INCREMENT BY 1 RESTART WITH 1;
-ALTER SEQUENCE plain_codes_ids_seq MINVALUE 1 INCREMENT BY 1 RESTART WITH 50;
+ALTER SEQUENCE codifiers_ids_seq   MINVALUE 1   START WITH 1   INCREMENT BY 1;
+ALTER SEQUENCE plain_codes_ids_seq MINVALUE 100 START WITH 100 INCREMENT BY 1;
 
 SELECT new_codifier_w_subcodes(
           make_codekeyl_bystr('Root')                   -- parent of codifier
@@ -81,8 +81,8 @@ SELECT new_codifier_w_subcodes(
 	                ] :: code_construction_input[] -- subcodes
         );
 
-ALTER SEQUENCE codifiers_ids_seq   MINVALUE 100   INCREMENT BY 10 RESTART WITH 100;
-ALTER SEQUENCE plain_codes_ids_seq MINVALUE 10000 INCREMENT BY 10 RESTART WITH 10000;
+ALTER SEQUENCE codifiers_ids_seq   MINVALUE   1000 START WITH   1000 INCREMENT BY 10;
+ALTER SEQUENCE plain_codes_ids_seq MINVALUE 100000 START WITH 100000 INCREMENT BY 10;
 
 SELECT new_code_by_userseqs(ROW ('eng', 'plain code' :: code_type) :: code_construction_input, make_codekeyl_bystr('Languages'), TRUE , '', 'languages_ids_seq') AS eng_id
      , new_code_by_userseqs(ROW ('rus', 'plain code' :: code_type) :: code_construction_input, make_codekeyl_bystr('Languages'), FALSE, '', 'languages_ids_seq') AS rus_id

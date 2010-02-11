@@ -55,9 +55,11 @@ Changes from 0.5 to 0.5.1
   their ON UPDATE CASCADE rules would conflict 
   with INSTEAD OF UPDATE DO NOTHING.
 
+
 Changes from 0.5.1 to 0.5.2
 --------------------------------------------
 * Added functions "optimized_[a]codekey[l]_isit".
+
 
 Changes from 0.5.2 to 0.5.3
 --------------------------------------------
@@ -70,3 +72,12 @@ Changes from 0.5.2 to 0.5.3
      + optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)
      + optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng)
 
+
+Changes from 0.5.3 to 0.5.4
+--------------------------------------------
+* Correction of sequences: 
+      **         codifiers IDs are at   1000-79999
+      **       plain codes IDs are at 100000-maxint
+      **   languages codes IDs are at  80000-89999
+      ** nameable entities IDs are at  90000-99999
+      **          reserved IDs are at      0-  999
