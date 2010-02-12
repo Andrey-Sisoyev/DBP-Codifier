@@ -2103,7 +2103,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION get_nonplaincode_by_str(par_codifier varchar) IS
+COMMENT ON FUNCTION get_code_by_str(par_codifier varchar, par_code varchar) IS
 'get_code(TRUE, make_acodekeyl_str2(par_codifier, par_code))
 Returns NULL if nothing found.';
 
