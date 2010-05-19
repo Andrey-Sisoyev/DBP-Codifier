@@ -8,7 +8,8 @@ TOC
 -------------------------------------------------------------------------------
 A. Main commands
 B. How to install the package?
-C. Note on supported platforms.
+C. Note on supported platforms and requirements
+D. Vulnerabilities
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
@@ -68,7 +69,7 @@ To install this DB package (in PostgreSQL, in Linux) run script:
 
 Parameters:
 (1) <db_name> 
-        your DB name "[_a-z][-_a-z0-9.]*", in which the application will work.
+        your DB name "[_a-z][_a-z0-9]*", in which the application will work.
 (2) (--drop | --new | --overwrite | --existing | --list) after <db_name> 
         --drop
            Delete an existing DB with name <db_name>.
@@ -86,7 +87,7 @@ Parameters:
         --list
            Lists all applications available in the data base <db_name>.
 (3) <app_name> 
-        your application name "[_a-z][-_a-z0-9.]*", it's also used 
+        your application name "[_a-z][_a-z0-9]*", it's also used 
         in schema name.
 (4) (--drop | --new | --overwrite | --existing | --list) after <app_name>  
         --drop
@@ -176,8 +177,8 @@ For the combinations 3,4,5,13,14, usage:
 
 Since the PostgreSQL has some strange case-sensitivity behaviour 
 in the \c[onnect] command, it is decided to use lowercase DB and 
-application names only - "[_a-z][-_a-z0-9.]*" instead of 
-"[_a-zA-Z][-_a-zA-Z0-9.]*". 
+application names only - "[_a-z][_a-z0-9]*" instead of 
+"[_a-zA-Z][_a-zA-Z0-9]*". 
 Otherwise, script were not guaranteed to work properly.
 
 Check "db_inst.sh.log" to make sure that no problems occurred.
@@ -189,15 +190,60 @@ C. Note on supported platforms.
 -------------------------------------------------------------------------------
 Originally this DB packaging concept was aimed to work with 
 any DBMS (Data Base Management System) supported by HDBC haskell package, 
-and independent of OS. However, it is made and tested 
-only in(for) ArchLinux and PostgreSQL v8.4. 
+and independent of OS. 
+
+However, it is made and tested only in(for) ArchLinux and PostgreSQL v8.4.2. 
 The installation script uses some standard DB structure template,
 to realize which (make a real sql script from template) *bash* and *sed* 
-scripts are used. Also SQL scripts use "rm -rf" Linux commands.
+scripts are used, and some usual Linux commands for files management.
 
 Thus this DB packaging is currently provided to work only in OSes, that 
-support *bash* and *sed* - Linux an other *nixes; and only with PostgreSQL DBMS.
+support *bash* and *sed* - Linux an other *nixes; 
+and only with PostgreSQL DBMS.
 
-But it's not hard to port this DB packaging standard to other OSes, I guess. 
+But it's not hard to port this DBP packaging system to other OSes, I guess. 
+
+DBP packaging system requires PostgreSQL to be installed 
+with an additional modules: "dblink" and "adminpack".
+This module must be installed in the default DB, which is used when we call 
+psql command in shell (to determine which one is it you may 
+use "select current_database();" query). 
+It (dblink) is a standard PostgreSQL module, not installed with 
+standard PostgreSQL distribution though. Information about it to be found
+on official site or in PostgreSQL CVS "contrib" directory.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+
+C. Vulnerabilities
+-------------------------------------------------------------------------------
+Main vulnerabilities:
+** Newly created roles has passwords identical to their names. 
+   Easily solvable - just change the password. But don't forget to do it 
+   for all roles!
+** db_inst.sh script requires to be run in trusted mode and under superuser! 
+   In PostgreSQL file pg_hba.conf authentification method for place where 
+   from you are running the script should be "trust". 
+   If your script has anything that could sabotage neighbor databases/schemes,
+   It may suceed, since superuser will be accessible. 
+   Don't forget to change authentification method back to secure, 
+   when you are done!
+** Automatic dropping of database dependant roles and tablespaces!
+   Roles and tablespaces are usually defined over whole cluster of databases,
+   but this standard introduces different approach, 
+   where roles and tablespaces may be dependant on applications and data bases.
+   Thus, these roles and tablespaces get dropped by cascad whenever application
+   or database gets dropped!
+    *** If you dont want role or tablespace to be dropped by cascade, locate it
+        in table 
+          "public.dbp__db_dependant_clusterwide_objs"
+        change flags 
+          "drop_it_by_cascade_when_dropping_db"
+          "drop_it_by_cascade_when_dropping_app" 
+        accordingly.
+    *** Any user, that has application/database owner role may register 
+        any tablespace/role to be deleted by cascade with application/database.
+        Thus if he has bad intentions or is "very uncareful" he may 
+        perform a devastating clusterwide sabotage.
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------

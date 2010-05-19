@@ -2,15 +2,17 @@
 --
 -- All rights reserved.
 --
--- For information about license see COPYING file in the root directory of current nominal package
+-- For license and copyright information, see the file COPYRIGHT
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
 
 -- (1) case sensetive (2) postgres lowercases real names
-\c <<$db_name$>> user_<<$app_name$>>_owner
+\c <<$db_name$>> user_db<<$db_name$>>_app<<$app_name$>>_owner
 
-SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
+SET search_path TO sch_<<$app_name$>>; -- , comn_funs, public; -- sets only for current session
+
+\echo NOTICE >>>>> functions.drop.sql [BEGIN]
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
@@ -107,6 +109,10 @@ DROP TYPE IF EXISTS t_code_key_by_lng;
 DROP TYPE IF EXISTS t_addressed_code_key;
 DROP TYPE IF EXISTS t_code_key;
 
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
+\echo NOTICE >>>>> functions.drop.sql [END]
 
-
+-- \i modules/module1.drop.sql
+-- \i modules/module2.drop.sql

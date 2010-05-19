@@ -2,20 +2,29 @@
 --
 -- All rights reserved.
 --
--- For information about license see COPYING file in the root directory of current nominal package
+-- For license and copyright information, see the file COPYRIGHT
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
 
 -- (1) case sensetive (2) postgres lowercases real names
-\c <<$db_name$>> user_<<$app_name$>>_owner
+\c <<$db_name$>> user_db<<$db_name$>>_app<<$app_name$>>_owner
 
-SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
-SELECT set_config('client_min_messages', 'NOTICE', FALSE);
+SET search_path TO sch_<<$app_name$>>, comn_funs, public; -- sets only for current session
+\set ECHO none
 
---------------------------------------------------------------------------
---------------------------------------------------------------------------
---------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+-- \i modules/module1.init.sql
+-- \i modules/module2.init.sql
+
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+\echo NOTICE >>>>> functions.init.sql [BEGIN]
+
 -- Referencing functions:
 
 CREATE TYPE t_code_key                  AS (code_id integer, code_text varchar);
@@ -23,6 +32,7 @@ CREATE TYPE t_addressed_code_key        AS (codifier_key t_code_key, code_key t_
 CREATE TYPE t_code_key_by_lng           AS (key_lng t_code_key,                          code_key t_code_key);
 CREATE TYPE t_addressed_code_key_by_lng AS (key_lng t_code_key, codifier_key t_code_key, code_key t_code_key);
 
+--------------------------------------------------------------------------
 --------------------------------------------------------------------------
 
 COMMENT ON TYPE t_code_key IS
@@ -64,102 +74,90 @@ Since t_addressed_code_key_by_lng is able to simulate all simplier code_key type
 
 CREATE OR REPLACE FUNCTION make_codekey(par_code_id integer, par_code_text varchar) RETURNS t_code_key AS $$
         SELECT ROW($1, $2) :: sch_<<$app_name$>>.t_code_key;
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION make_codekey_null() RETURNS t_code_key AS $$
         SELECT sch_<<$app_name$>>.make_codekey(NULL :: integer, NULL :: varchar);
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION make_codekey_byid(par_code_id integer) RETURNS t_code_key AS $$
         SELECT sch_<<$app_name$>>.make_codekey($1, NULL :: varchar);
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION make_codekey_bystr(par_code_text varchar) RETURNS t_code_key AS $$
         SELECT sch_<<$app_name$>>.make_codekey(NULL :: integer, $1);
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 ------------------
 
-CREATE OR REPLACE FUNCTION make_acodekey(par_cf_key t_code_key, par_c_key t_code_key) RETURNS t_addressed_code_key AS $$
-DECLARE
-        r sch_<<$app_name$>>.t_addressed_code_key;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
-BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
-        r.codifier_key:= par_cf_key; r.code_key:= par_c_key;
-
-        PERFORM leave_schema_namespace(namespace_info);
+CREATE OR REPLACE FUNCTION make_acodekey(par_cf_key t_code_key, par_c_key t_code_key) RETURNS t_addressed_code_key
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
+DECLARE r sch_<<$app_name$>>.t_addressed_code_key;
+BEGIN   r.codifier_key:= par_cf_key; r.code_key:= par_c_key;
         RETURN r;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE OR REPLACE FUNCTION make_acodekey_null() RETURNS t_addressed_code_key AS $$
         SELECT sch_<<$app_name$>>.make_acodekey(
                         sch_<<$app_name$>>.make_codekey_null()
                       , sch_<<$app_name$>>.make_codekey_null()
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 ------------------
 
-CREATE OR REPLACE FUNCTION make_codekeyl(par_key_lng t_code_key, par_code_key t_code_key) RETURNS t_code_key_by_lng AS $$
-DECLARE
-        r sch_<<$app_name$>>.t_code_key_by_lng;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
-BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
-        r.key_lng:= par_key_lng; r.code_key:= par_code_key;
-
-        PERFORM leave_schema_namespace(namespace_info);
+CREATE OR REPLACE FUNCTION make_codekeyl(par_key_lng t_code_key, par_code_key t_code_key) RETURNS t_code_key_by_lng
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
+DECLARE r sch_<<$app_name$>>.t_code_key_by_lng;
+BEGIN   r.key_lng:= par_key_lng; r.code_key:= par_code_key;
         RETURN r;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE OR REPLACE FUNCTION make_codekeyl_null() RETURNS t_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_codekeyl(
                         sch_<<$app_name$>>.make_codekey_null()
                       , sch_<<$app_name$>>.make_codekey_null()
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION make_codekeyl_byid(par_code_id integer) RETURNS t_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_codekeyl(
                         sch_<<$app_name$>>.make_codekey_null()
                       , sch_<<$app_name$>>.make_codekey_byid($1)
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION make_codekeyl_bystr(par_code_text varchar) RETURNS t_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_codekeyl(
                         sch_<<$app_name$>>.make_codekey_null()
                       , sch_<<$app_name$>>.make_codekey_bystr($1)
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION make_codekeyl_bystrl(par_lng_key t_code_key, par_code_text varchar) RETURNS t_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_codekeyl(
                         $1
                       , sch_<<$app_name$>>.make_codekey_bystr($2)
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 ------------------
 
-CREATE OR REPLACE FUNCTION make_acodekeyl(par_key_lng t_code_key, par_cf_key t_code_key, par_c_key t_code_key) RETURNS t_addressed_code_key_by_lng AS $$
-DECLARE
-        r sch_<<$app_name$>>.t_addressed_code_key_by_lng;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
-BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
-        r.key_lng:= par_key_lng; r.codifier_key:= par_cf_key; r.code_key:= par_c_key;
-
-        PERFORM leave_schema_namespace(namespace_info);
+CREATE OR REPLACE FUNCTION make_acodekeyl(par_key_lng t_code_key, par_cf_key t_code_key, par_c_key t_code_key) RETURNS t_addressed_code_key_by_lng
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
+DECLARE r sch_<<$app_name$>>.t_addressed_code_key_by_lng;
+BEGIN   r.key_lng:= par_key_lng; r.codifier_key:= par_cf_key; r.code_key:= par_c_key;
         RETURN r;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE OR REPLACE FUNCTION make_acodekeyl_null() RETURNS t_addressed_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_acodekeyl(
@@ -167,7 +165,7 @@ CREATE OR REPLACE FUNCTION make_acodekeyl_null() RETURNS t_addressed_code_key_by
                       , sch_<<$app_name$>>.make_codekey_null()
                       , sch_<<$app_name$>>.make_codekey_null()
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION make_acodekeyl_byid(par_code_id integer) RETURNS t_addressed_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_acodekeyl(
@@ -175,7 +173,7 @@ CREATE OR REPLACE FUNCTION make_acodekeyl_byid(par_code_id integer) RETURNS t_ad
                       , sch_<<$app_name$>>.make_codekey_null()
                       , sch_<<$app_name$>>.make_codekey_byid($1)
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION make_acodekeyl_bystr1(par_code_text varchar) RETURNS t_addressed_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_acodekeyl(
@@ -183,7 +181,7 @@ CREATE OR REPLACE FUNCTION make_acodekeyl_bystr1(par_code_text varchar) RETURNS 
                       , sch_<<$app_name$>>.make_codekey_null()
                       , sch_<<$app_name$>>.make_codekey_bystr($1)
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION make_acodekeyl_bystr2(par_codifier_text varchar, par_code_text varchar) RETURNS t_addressed_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_acodekeyl(
@@ -191,7 +189,7 @@ CREATE OR REPLACE FUNCTION make_acodekeyl_bystr2(par_codifier_text varchar, par_
                       , sch_<<$app_name$>>.make_codekey_bystr($1)
                       , sch_<<$app_name$>>.make_codekey_bystr($2)
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 --------------------------------------------------------------------------
 
@@ -201,7 +199,7 @@ CREATE OR REPLACE FUNCTION generalize_codekey(par_key t_code_key) RETURNS t_addr
                       , sch_<<$app_name$>>.make_codekey_null()
                       , $1
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION generalize_codekeyl(par_key t_code_key_by_lng) RETURNS t_addressed_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_acodekeyl(
@@ -209,7 +207,7 @@ CREATE OR REPLACE FUNCTION generalize_codekeyl(par_key t_code_key_by_lng) RETURN
                       , sch_<<$app_name$>>.make_codekey_null()
                       , ($1).code_key
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION generalize_acodekey(par_key t_addressed_code_key) RETURNS t_addressed_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_acodekeyl(
@@ -217,7 +215,7 @@ CREATE OR REPLACE FUNCTION generalize_acodekey(par_key t_addressed_code_key) RET
                       , ($1).codifier_key
                       , ($1).code_key
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION generalize_codekeyl_wcf(par_cf_codekey t_code_key, par_key t_code_key_by_lng) RETURNS t_addressed_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_acodekeyl(
@@ -225,7 +223,7 @@ CREATE OR REPLACE FUNCTION generalize_codekeyl_wcf(par_cf_codekey t_code_key, pa
                       , $1
                       , ($2).code_key
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION generalize_codekey_wcf(par_cf_codekey t_code_key, par_key t_code_key) RETURNS t_addressed_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_acodekeyl(
@@ -233,7 +231,7 @@ CREATE OR REPLACE FUNCTION generalize_codekey_wcf(par_cf_codekey t_code_key, par
                       , $1
                       , $2
                       );
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 
 --------------------------------------------------------------------------
@@ -287,14 +285,13 @@ cf_nm (+l_id)
 cf_nm (+l_nm)
 ';
 
-CREATE OR REPLACE FUNCTION codekey_type(par_key t_code_key) RETURNS t_code_key_type AS $$
+CREATE OR REPLACE FUNCTION codekey_type(par_key t_code_key) RETURNS t_code_key_type
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         ct sch_<<$app_name$>>.t_code_key_type;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
-BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
-        IF par_key IS NULL THEN
+BEGIN   IF par_key IS NULL THEN
                 ct:= 'undef';
         ELSIF par_key.code_id IS NOT NULL THEN
                 ct:= 'c_id';
@@ -304,10 +301,9 @@ BEGIN
                 ct:= 'undef';
         END IF;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN ct;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION codekey_type(par_key t_code_key) IS
 'May return 3 types
@@ -318,16 +314,15 @@ COMMENT ON FUNCTION codekey_type(par_key t_code_key) IS
 Doesn''t return NULL.
 ';
 
-CREATE OR REPLACE FUNCTION acodekey_type(par_key t_addressed_code_key) RETURNS t_code_key_type AS $$
+CREATE OR REPLACE FUNCTION acodekey_type(par_key t_addressed_code_key) RETURNS t_code_key_type
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         ct  sch_<<$app_name$>>.t_code_key_type;
         ct2 sch_<<$app_name$>>.t_code_key_type;
         ct3 sch_<<$app_name$>>.t_code_key_type;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
-BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
-        IF par_key IS NULL THEN
+BEGIN   IF par_key IS NULL THEN
                 ct:= 'undef' :: t_code_key_type;
         ELSE
                 ct2:= codekey_type(par_key.code_key);
@@ -363,10 +358,9 @@ BEGIN
                 END IF;
         END IF;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN ct;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION acodekey_type(par_key t_addressed_code_key) IS
 'May return 7 types
@@ -381,15 +375,14 @@ COMMENT ON FUNCTION acodekey_type(par_key t_addressed_code_key) IS
 Doesn''t return NULL.
 ';
 
-CREATE OR REPLACE FUNCTION codekeyl_type(par_key t_code_key_by_lng) RETURNS t_code_key_type AS $$
-DECLARE
-        ct  sch_<<$app_name$>>.t_code_key_type;
+CREATE OR REPLACE FUNCTION codekeyl_type(par_key t_code_key_by_lng) RETURNS t_code_key_type
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
+DECLARE ct  sch_<<$app_name$>>.t_code_key_type;
         ct2 sch_<<$app_name$>>.t_code_key_type;
         ct3 sch_<<$app_name$>>.t_code_key_type;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
-BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-        IF par_key IS NULL THEN
+BEGIN   IF par_key IS NULL THEN
                 ct:= 'undef';
         ELSE
                 ct2:= codekey_type(par_key.code_key);
@@ -415,10 +408,9 @@ BEGIN
                 END IF;
         END IF;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN ct;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION codekeyl_type(par_key t_code_key_by_lng) IS
 'May return 5 types
@@ -431,16 +423,16 @@ COMMENT ON FUNCTION codekeyl_type(par_key t_code_key_by_lng) IS
 Doesn''t return NULL.
 ';
 
-CREATE OR REPLACE FUNCTION acodekeyl_type(par_key t_addressed_code_key_by_lng) RETURNS t_code_key_type AS $$
+CREATE OR REPLACE FUNCTION acodekeyl_type(par_key t_addressed_code_key_by_lng) RETURNS t_code_key_type
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         ct  sch_<<$app_name$>>.t_code_key_type;
         ct2 sch_<<$app_name$>>.t_code_key_type;
         ct3 sch_<<$app_name$>>.t_code_key_type;
         ct4 sch_<<$app_name$>>.t_code_key_type;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         IF par_key IS NULL THEN
                 ct:= 'undef';
         ELSE
@@ -512,10 +504,9 @@ BEGIN
                 END IF;
         END IF;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN ct;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION acodekeyl_type(par_key t_addressed_code_key_by_lng) IS
 'May return 15 types
@@ -540,20 +531,21 @@ Doesn''t return NULL.
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION optimized_codekey_isit(par_codekey t_code_key) RETURNS boolean AS $$
+CREATE OR REPLACE FUNCTION optimized_codekey_isit(par_codekey t_code_key) RETURNS boolean
+LANGUAGE SQL IMMUTABLE
+AS $$
         SELECT sch_<<$app_name$>>.codekey_type($1) = 'c_id';
-$$ LANGUAGE SQL;
+$$;
 
-CREATE OR REPLACE FUNCTION optimized_acodekey_isit(par_acodekey t_addressed_code_key, par_opt_mask integer) RETURNS boolean AS $$
+CREATE OR REPLACE FUNCTION optimized_acodekey_isit(par_acodekey t_addressed_code_key, par_opt_mask integer) RETURNS boolean
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         ctype sch_<<$app_name$>>.t_code_key_type;
         r boolean;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         IF par_opt_mask = 0 THEN
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN TRUE;
         ELSIF par_opt_mask NOT IN (1,2,3) THEN
                 RAISE EXCEPTION 'An error occurred in function "optimized_acodekey_isit"! Bad mask.';
@@ -561,15 +553,13 @@ BEGIN
 
         ctype:= acodekey_type(par_acodekey);
         IF ctype = 'undef' THEN
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN FALSE;
         END IF;
         r:=     ((mod(par_opt_mask     , 2) = 0) OR (ctype = 'c_id'))
             AND ((mod(par_opt_mask >> 1, 2) = 0) OR (codekey_type(par_acodekey.codifier_key) = 'c_id'));
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN r;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION optimized_acodekey_isit(par_acodekey t_addressed_code_key, par_opt_mask integer) IS
 'Parameter "par_opt_mask" is a bit-mask:
@@ -582,16 +572,15 @@ Doesn''t return NULL.
 
 --------------
 
-CREATE OR REPLACE FUNCTION optimized_codekeyl_isit(par_codekeyl t_code_key_by_lng, par_opt_mask integer) RETURNS boolean AS $$
+CREATE OR REPLACE FUNCTION optimized_codekeyl_isit(par_codekeyl t_code_key_by_lng, par_opt_mask integer) RETURNS boolean
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         ctype sch_<<$app_name$>>.t_code_key_type;
         r boolean;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         IF par_opt_mask = 0 THEN
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN TRUE;
         ELSIF par_opt_mask NOT IN (1,4,5) THEN
                 RAISE EXCEPTION 'An error occurred in function "optimized_codekeyl_isit"! Bad mask.';
@@ -599,15 +588,13 @@ BEGIN
 
         ctype:= codekeyl_type(par_codekeyl);
         IF ctype = 'undef' THEN
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN FALSE;
         END IF;
         r:=     ((mod(par_opt_mask     , 2) = 0) OR (ctype = 'c_id'))
             AND ((mod(par_opt_mask >> 2, 2) = 0) OR (codekey_type(par_codekeyl.key_lng) = 'c_id'));
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN r;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION optimized_codekeyl_isit(par_codekeyl t_code_key_by_lng, par_opt_mask integer) IS
 'Parameter "par_opt_mask" is a bit-mask:
@@ -619,16 +606,15 @@ COMMENT ON FUNCTION optimized_codekeyl_isit(par_codekeyl t_code_key_by_lng, par_
 Doesn''t return NULL.
 ';
 
-CREATE OR REPLACE FUNCTION optimized_acodekeyl_isit(par_acodekeyl t_addressed_code_key_by_lng, par_opt_mask integer) RETURNS boolean AS $$
+CREATE OR REPLACE FUNCTION optimized_acodekeyl_isit(par_acodekeyl t_addressed_code_key_by_lng, par_opt_mask integer) RETURNS boolean
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         ctype sch_<<$app_name$>>.t_code_key_type;
         r boolean;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         IF par_opt_mask = 0 THEN
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN TRUE;
         ELSIF par_opt_mask > 7 OR par_opt_mask < 0 THEN
                 RAISE EXCEPTION 'An error occurred in function "optimized_acodekeyl_isit"! Bad mask.';
@@ -636,16 +622,14 @@ BEGIN
 
         ctype:= acodekeyl_type(par_acodekeyl);
         IF ctype = 'undef' THEN
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN FALSE;
         END IF;
         r:=     ((mod(par_opt_mask     , 2) = 0) OR (ctype = 'c_id'))
             AND ((mod(par_opt_mask >> 1, 2) = 0) OR (codekey_type(par_acodekeyl.codifier_key) = 'c_id'))
             AND ((mod(par_opt_mask >> 2, 2) = 0) OR (codekey_type(par_acodekeyl.key_lng) = 'c_id'));
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN r;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION optimized_acodekeyl_isit(par_acodekeyl t_addressed_code_key_by_lng, par_opt_mask integer) IS
 'Parameter "par_opt_mask" is a bit-mask:
@@ -677,7 +661,7 @@ CREATE OR REPLACE FUNCTION show_codekey(par_key t_code_key) RETURNS varchar AS $
                       END
                )
             || '}';
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION show_acodekey(par_key t_addressed_code_key) RETURNS varchar AS $$
         SELECT '{t_addressed_code_key | '
@@ -698,7 +682,7 @@ CREATE OR REPLACE FUNCTION show_acodekey(par_key t_addressed_code_key) RETURNS v
                       END
                )
             || '}';
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION show_codekeyl(par_key t_code_key_by_lng) RETURNS varchar AS $$
         SELECT '{t_code_key_by_lng | '
@@ -718,7 +702,7 @@ CREATE OR REPLACE FUNCTION show_codekeyl(par_key t_code_key_by_lng) RETURNS varc
                       END
                )
             || '}';
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION show_acodekeyl(par_key t_addressed_code_key_by_lng) RETURNS varchar AS $$
         SELECT '{t_addressed_code_key_by_lng | '
@@ -744,14 +728,17 @@ CREATE OR REPLACE FUNCTION show_acodekeyl(par_key t_addressed_code_key_by_lng) R
                       END
                )
             || '}';
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
 -- Lookup functions:
 
-CREATE OR REPLACE FUNCTION optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_determine_mask integer) RETURNS t_addressed_code_key_by_lng AS $$
+CREATE OR REPLACE FUNCTION optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_determine_mask integer) RETURNS t_addressed_code_key_by_lng
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         tmp_codekey      sch_<<$app_name$>>.t_code_key;
         v_acodekeyl      sch_<<$app_name$>>.t_addressed_code_key_by_lng;
@@ -763,7 +750,6 @@ DECLARE
         test             boolean;
         allow_insufficient_key boolean:= FALSE;
         rows_count       integer:= -1;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
         IF par_determine_mask > 7 OR par_determine_mask < 0 THEN
                 RAISE EXCEPTION 'Unsupported determination mode mask!';
@@ -774,7 +760,6 @@ BEGIN
                         RETURN par_acodekeyl;
                 END IF;
         END IF;
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
 
         v_acodekeyl := par_acodekeyl;
         v_acodekeyl_type := acodekeyl_type(v_acodekeyl);
@@ -1249,10 +1234,9 @@ BEGIN
         --         END IF;
         -- END IF;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN v_acodekeyl;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_determine_mask integer) IS
 'This function optimizes addressed and languaged code key.
@@ -1275,7 +1259,10 @@ This function is not for tasks which include the verification: if code addressed
 -------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION optimization_mode_for_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)
-RETURNS integer AS $$
+RETURNS integer
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         result_mode integer:= 0;
         v_acodekeyl_type   sch_<<$app_name$>>.t_code_key_type;
@@ -1322,7 +1309,7 @@ BEGIN
 
         RETURN result_mode;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION optimization_mode_for_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer) IS '
 Context:
@@ -1355,15 +1342,15 @@ COMMENT ON FUNCTION optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_add
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION code_id_of(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng) RETURNS integer AS $$
+CREATE OR REPLACE FUNCTION code_id_of(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng) RETURNS integer
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         c_id integer:= NULL;
         srch_prfd boolean;
         cnt integer;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         -- RAISE WARNING '%', show_acodekeyl(par_acodekeyl);
 
         srch_prfd:= FALSE;
@@ -1524,10 +1511,9 @@ BEGIN
                 RAISE EXCEPTION 'An error occurred in function "code_id_of" for code %! More then one code is identified by given code_key, which should never happen!', show_acodekeyl(par_acodekeyl);
         END IF;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN c_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION code_id_of(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng) IS
 'For keys of type "undef" and "cf_*" NULL is returned.
@@ -1583,21 +1569,20 @@ $$ LANGUAGE SQL;
 -------------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION codifier_default_code(par_if_exists boolean, par_cf_keyl t_code_key_by_lng)
-RETURNS integer AS $$
+RETURNS integer
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         d integer:= NULL;
         cnt integer;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         CASE codekeyl_type(par_cf_keyl)
             WHEN 'undef' THEN
                 IF NOT par_if_exists THEN
                         RAISE EXCEPTION 'An error occurred, when trying get a default code ID for codifier %! Key must be defined.', show_codekeyl(par_cf_keyl);
                 END IF;
 
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN NULL;
             WHEN 'c_id' THEN
                 SELECT subcode_id INTO d
@@ -1644,16 +1629,14 @@ BEGIN
                 IF NOT par_if_exists THEN
                         RAISE EXCEPTION 'An error occurred, when trying get a default code ID for codifier: %! Default not found.', show_codekeyl(par_cf_keyl);
                 END IF;
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN NULL;
         ELSIF cnt > 1 THEN
                 RAISE EXCEPTION 'An error occurred, when trying get a default code ID for codifier: %! More then one default, which is illegal.', show_codekeyl(par_cf_keyl);
         END IF;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN d;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION codifier_default_code(par_if_exists boolean, par_cf_key t_code_key_by_lng) IS
 'For keys of type "undef" NULL is returned. It will also return NULL, if default is not found.
@@ -1661,39 +1644,38 @@ If first parameter is FALSE, then all cases, when NULL is to be returned, an EXC
 ';
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION get_code(par_if_exists boolean, par_key t_addressed_code_key_by_lng) RETURNS sch_<<$app_name$>>.codes AS $$
+CREATE OR REPLACE FUNCTION get_code(par_if_exists boolean, par_key t_addressed_code_key_by_lng) RETURNS sch_<<$app_name$>>.codes
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         ccc sch_<<$app_name$>>.codes%ROWTYPE;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         SELECT c.*
         INTO ccc
         FROM sch_<<$app_name$>>.codes AS c
         WHERE c.code_id = code_id_of(par_if_exists, par_key);
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN ccc;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION get_code(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng) IS
 'Wrapper around code_id_of(...).';
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION code_belongs_to_codifier(par_if_cf_exists boolean, par_acodekeyl t_addressed_code_key_by_lng) RETURNS boolean AS $$
+CREATE OR REPLACE FUNCTION code_belongs_to_codifier(par_if_cf_exists boolean, par_acodekeyl t_addressed_code_key_by_lng) RETURNS boolean
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         e boolean:= NULL;
         srchd boolean:= FALSE;
 	cnt integer;
         __const_nom_cf_name CONSTANT varchar := 'Common nominal codes set';
         __const_undef_c_name CONSTANT varchar:= 'undefined';
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         -- RAISE WARNING '%', show_acodekeyl(par_acodekeyl);
 
         CASE acodekeyl_type(par_acodekeyl)
@@ -1932,20 +1914,17 @@ BEGIN
                         IF NOT par_if_cf_exists THEN
                                 PERFORM get_code(FALSE, make_acodekeyl((par_acodekeyl).key_lng, make_codekey_null(), (par_acodekeyl).codifier_key));
                         END IF;
-                        PERFORM leave_schema_namespace(namespace_info);
                         RETURN FALSE;
                 ELSIF cnt > 1 THEN
                         RAISE EXCEPTION 'Data inconsistecy error detected, when trying to check, if code belongs to codifier in code key %! Multiple belongings are found, but only one must have been.', show_acodekeyl(par_acodekeyl);
                 ELSE
-                        PERFORM leave_schema_namespace(namespace_info);
                         RETURN TRUE;
                 END IF;
         ELSE
                 RAISE EXCEPTION 'An error detected, when trying to check, if code belongs to codifier in code key %! Codifier not specified.', show_acodekeyl(par_acodekeyl);
         END IF;
-        PERFORM leave_schema_namespace(namespace_info);
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION code_belongs_to_codifier(par_if_cf_exists boolean, par_acodekeyl t_addressed_code_key_by_lng) IS
 'Keys of type patterned by "cf_*" are treated to check, if codifier allows code {"Common nominal codes set"."undefined"}.
@@ -2000,13 +1979,13 @@ the the behaviour of CHECK CONSTRAINT is same as it returned TRUE.
 ';
 
 -------------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION get_codes_l(par_key t_code_key_by_lng) RETURNS SETOF sch_<<$app_name$>>.codes AS $$
+CREATE OR REPLACE FUNCTION get_codes_l(par_key t_code_key_by_lng) RETURNS SETOF sch_<<$app_name$>>.codes
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         ccc sch_<<$app_name$>>.codes%ROWTYPE;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         CASE codekeyl_type(par_key)
             WHEN 'c_id' THEN
                 RETURN QUERY
@@ -2046,10 +2025,9 @@ BEGIN
                 RAISE EXCEPTION 'An error occurred in function "get_codes_l"! Unexpected "codekeyl_type(par_key)" output for code key: %!', show_codekeyl(par_key);
         END CASE;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION get_codes_l(par_key t_code_key_by_lng) IS
 'Tolerant version of "get_code(...)".
@@ -2057,14 +2035,14 @@ It doesn''t use "code_id_of(...)", and makes it possible to query for a set of c
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION get_nonplaincode_by_str(par_codifier varchar) RETURNS sch_<<$app_name$>>.codes AS $$
+CREATE OR REPLACE FUNCTION get_nonplaincode_by_str(par_codifier varchar) RETURNS sch_<<$app_name$>>.codes
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         ccc sch_<<$app_name$>>.codes%ROWTYPE;
         cnt integer;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         SELECT c.*
         INTO ccc
         FROM sch_<<$app_name$>>.codes AS c
@@ -2074,34 +2052,31 @@ BEGIN
         GET DIAGNOSTICS cnt = ROW_COUNT;
 
         IF cnt = 0 THEN
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN NULL;
         ELSIF cnt > 1 THEN
                 RAISE EXCEPTION 'Data inconsistecy error detected (function "get_nonplaincode_by_str"), when trying to read a codifier "%"! Multiple nonplain codes has such names (which is illegal), can not decide, which one to return.', par_codifier;
         END IF;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN ccc;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION get_nonplaincode_by_str(par_codifier varchar) IS
 'Returns NULL if nothing found.';
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION get_code_by_str(par_codifier varchar, par_code varchar) RETURNS sch_<<$app_name$>>.codes AS $$
+CREATE OR REPLACE FUNCTION get_code_by_str(par_codifier varchar, par_code varchar) RETURNS sch_<<$app_name$>>.codes
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         ccc sch_<<$app_name$>>.codes%ROWTYPE;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         ccc:= get_code(TRUE, make_acodekeyl_bystr2(par_codifier, par_code));
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN ccc;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION get_code_by_str(par_codifier varchar, par_code varchar) IS
 'get_code(TRUE, make_acodekeyl_str2(par_codifier, par_code))
@@ -2109,13 +2084,13 @@ Returns NULL if nothing found.';
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION get_codes_of_codifier(par_acodekeyl t_addressed_code_key_by_lng) RETURNS SETOF sch_<<$app_name$>>.codes AS $$
+CREATE OR REPLACE FUNCTION get_codes_of_codifier(par_acodekeyl t_addressed_code_key_by_lng) RETURNS SETOF sch_<<$app_name$>>.codes
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         c_id integer;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         c_id := code_id_of(TRUE, par_acodekeyl);
 
         RETURN QUERY
@@ -2123,23 +2098,22 @@ BEGIN
                 FROM sch_<<$app_name$>>.codes AS c, sch_<<$app_name$>>.codes_tree AS ct
                 WHERE c.code_id = ct.subcode_id
                   AND ct.supercode_id = c_id;
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION get_codes_of_codifier(par_acodekeyl t_addressed_code_key_by_lng) IS
 'Selects all subcodes from codes_tree, by supercode_id = code_id_of(TRUE,$1).';
 
 -------------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION get_codifiers_of_code(par_acodekeyl t_addressed_code_key_by_lng) RETURNS SETOF sch_<<$app_name$>>.codes AS $$
+CREATE OR REPLACE FUNCTION get_codifiers_of_code(par_acodekeyl t_addressed_code_key_by_lng) RETURNS SETOF sch_<<$app_name$>>.codes
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         c_id integer;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         c_id := code_id_of(TRUE, par_acodekeyl);
 
         RETURN QUERY
@@ -2147,10 +2121,9 @@ BEGIN
                 FROM sch_<<$app_name$>>.codes AS c, sch_<<$app_name$>>.codes_tree AS ct
                 WHERE c.code_id = ct.supercode_id
                   AND ct.subcode_id = c_id;
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION get_codifiers_of_code(par_acodekeyl t_addressed_code_key_by_lng) IS
 'Selects all supercodes from codes_tree, by subcode_id = code_id_of(TRUE,$1).';
@@ -2174,7 +2147,10 @@ CREATE OR REPLACE FUNCTION find_subcodes(
                         boolean
         , par_only_ones_not_reachable_from_elsewhere
                         boolean
-        ) RETURNS SETOF codes_tree_node AS $$
+        ) RETURNS SETOF codes_tree_node
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         max_dpth             integer;
         root_c               sch_<<$app_name$>>.codes%ROWTYPE;
@@ -2183,13 +2159,9 @@ DECLARE
         initial_scope_ids    integer[];
         shared_subcodes      integer[];
         excluded_subcodes    integer[];
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         root_c:= get_code(par_if_exists, par_cf_key);
         IF root_c IS NULL THEN
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN;
         END IF;
         root_codes_tree_node:= ROW(
@@ -2255,10 +2227,9 @@ BEGIN
                         WHERE NOT (ARRAY[x.code_id] <@ excluded_subcodes)
                           AND (x.code_id != root_c.code_id OR par_include_code_itself);
         END IF;
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION find_subcodes(
           par_if_exists boolean
@@ -2299,15 +2270,15 @@ CREATE OR REPLACE FUNCTION remove_code(
                         boolean
       , par_if_cascade__only_ones_not_reachable_from_elsewhere
                         boolean
-      ) RETURNS integer AS $$
+      ) RETURNS integer
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         cnt integer;
         find_results integer[];
         c_id integer;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         IF NOT par_cascade_remove_subcodes THEN
                 IF par_remove_code THEN
                         c_id := code_id_of(TRUE, par_acodekeyl);
@@ -2316,10 +2287,8 @@ BEGIN
 
                         GET DIAGNOSTICS cnt = ROW_COUNT;
 
-                        PERFORM leave_schema_namespace(namespace_info);
                         RETURN cnt;
                 ELSE
-                        PERFORM leave_schema_namespace(namespace_info);
                         RETURN 0;
                 END IF;
         ELSE
@@ -2332,12 +2301,10 @@ BEGIN
 
                 GET DIAGNOSTICS cnt = ROW_COUNT;
 
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN cnt;
         END IF;
-        PERFORM leave_schema_namespace(namespace_info);
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION remove_code(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_remove_code boolean, par_cascade_remove_subcodes boolean, par_if_cascade__only_ones_not_reachable_from_elsewhere boolean) IS
 'Wrapper around find_subcodes(...). Returns count of rows deleted.
@@ -2352,15 +2319,15 @@ CREATE OR REPLACE FUNCTION bind_code_to_codifier(
           par_c_acodekeyl t_addressed_code_key_by_lng
         , par_cf_codekeyl t_code_key_by_lng
         , par_dflt boolean
-        ) RETURNS integer AS $$
+        ) RETURNS integer
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         c_id  integer;
         cf_id integer;
         cnt   integer;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         c_id:=  code_id_of(FALSE,                     par_c_acodekeyl );
         cf_id:= code_id_of(FALSE, generalize_codekeyl(par_cf_codekeyl));
 
@@ -2369,10 +2336,9 @@ BEGIN
 
         GET DIAGNOSTICS cnt = ROW_COUNT;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN cnt;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION bind_code_to_codifier(
           par_c_acodekeyl  t_addressed_code_key_by_lng
@@ -2386,15 +2352,15 @@ COMMENT ON FUNCTION bind_code_to_codifier(
 CREATE OR REPLACE FUNCTION unbind_code_from_codifier(
           par_if_exists boolean
         , par_c_acodekeyl  t_addressed_code_key_by_lng
-        ) RETURNS integer AS $$
+        ) RETURNS integer
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         c_id  integer;
         cf_id integer;
         cnt integer:= 0;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         c_id:=  code_id_of(par_if_exists, par_c_acodekeyl);
         cf_id:= code_id_of(par_if_exists, generalize_codekeyl(make_codekeyl(par_c_acodekeyl.key_lng, par_c_acodekeyl.codifier_key)));
 
@@ -2406,10 +2372,9 @@ BEGIN
                 RAISE EXCEPTION 'An error occurred, when trying to unbind code %! Bad count (%) of rows modified.', show_acodekeyl(par_c_acodekeyl), cnt;
         END IF;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN cnt;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION unbind_code_from_codifier(
           par_if_exists boolean
@@ -2427,15 +2392,15 @@ CREATE OR REPLACE FUNCTION new_code_by_userseqs(
         , par_dflt_isit      boolean
         , par_codifier_ids_seq_name  varchar
         , par_plaincode_ids_seq_name varchar
-        ) RETURNS integer AS $$
+        ) RETURNS integer
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         cnt1 integer;
         cnt2 integer;
         c_id integer;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         IF par_code_construct.code_type = 'plain code' THEN
                 c_id := nextval(par_plaincode_ids_seq_name);
         ELSE
@@ -2455,10 +2420,9 @@ BEGIN
                               );
         END IF;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN c_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION new_code_by_userseqs(
           par_code_construct code_construction_input
@@ -2482,19 +2446,18 @@ CREATE OR REPLACE FUNCTION new_code(
           par_code_construct code_construction_input
         , par_super_code     t_code_key_by_lng
         , par_dflt_isit      boolean
-        ) RETURNS integer AS $$
+        ) RETURNS integer
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         c_id integer;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         c_id := new_code_by_userseqs(par_code_construct, par_super_code, par_dflt_isit, 'sch_<<$app_name$>>.codifiers_ids_seq', 'sch_<<$app_name$>>.plain_codes_ids_seq');
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN c_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION new_code(
           par_code_construct code_construction_input
@@ -2509,17 +2472,16 @@ CREATE OR REPLACE FUNCTION add_subcodes_under_codifier(
           par_cf t_code_key_by_lng
         , par_cf_dflt_codestr varchar
         , VARIADIC par_codes_array code_construction_input[]
-        )
-RETURNS integer[] AS $$
+        ) RETURNS integer[]
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         dflt_correct boolean;
         i integer;
         cf_id integer;
         c_ids_arr integer[];
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         cf_id:= code_id_of(FALSE, generalize_codekeyl(par_cf));
 
         dflt_correct := (par_cf_dflt_codestr IS NULL) OR (par_cf_dflt_codestr = '');
@@ -2540,10 +2502,9 @@ BEGIN
                 FROM unnest(par_codes_array) AS cil(code_text, code_type)
         );
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN c_ids_arr;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION add_subcodes_under_codifier(
           par_cf t_code_key_by_lng
@@ -2565,13 +2526,13 @@ CREATE OR REPLACE FUNCTION new_codifier_w_subcodes(
         , par_cf_dflt_codestr      varchar
         , VARIADIC par_codes_array code_construction_input[]
         )
-RETURNS result_of_making_new_codifier_w_subcodes AS $$
+RETURNS result_of_making_new_codifier_w_subcodes
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         r sch_<<$app_name$>>.result_of_making_new_codifier_w_subcodes;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         SELECT code_id INTO r.codifier_id
         FROM unnest(add_subcodes_under_codifier(par_super_cf, NULL :: varchar, VARIADIC ARRAY[par_cf_construct])) AS re(code_id);
 
@@ -2581,10 +2542,9 @@ BEGIN
                                       , VARIADIC par_codes_array
                                       );
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN r;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION new_codifier_w_subcodes(
           par_super_cf             t_code_key_by_lng
@@ -2603,15 +2563,15 @@ CREATE OR REPLACE FUNCTION make_codifier_from_plaincode(
         , par_cf          t_code_key_by_lng
         , par_cf_new_type code_type
         )
-RETURNS integer AS $$
+RETURNS integer
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         cf_id integer:= NULL;
         cnt integer;
         c sch_<<$app_name$>>.codes%ROWTYPE;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         -- validate input data
         IF par_cf_new_type = 'plain code' THEN
                 RAISE EXCEPTION 'An error occurred, in the function "make_codifier_from_plaincode", code %! The new type of code can not be "plain code".', show_codekeyl(par_cf);
@@ -2630,7 +2590,6 @@ BEGIN
                 IF NOT par_if_exists THEN
                         RAISE EXCEPTION 'An error occurred, in the function "make_codifier_from_plaincode", code %! Target code not found.', show_codekeyl(par_cf);
                 END IF;
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN NULL;
         END IF;
 
@@ -2650,10 +2609,9 @@ BEGIN
                 RETURNING code_id INTO cf_id;
         END IF;
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN cf_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION  make_codifier_from_plaincode(
           par_if_exists   boolean
@@ -2685,21 +2643,20 @@ CREATE OR REPLACE FUNCTION make_codifier_from_plaincode_w_values(
         , par_cf_dflt_codestr varchar
         , VARIADIC par_codes_array code_construction_input[] -- par_cf_dflt_codestr must persist in this array
         )
-RETURNS result_of_making_new_codifier_w_subcodes AS $$
+RETURNS result_of_making_new_codifier_w_subcodes
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         r sch_<<$app_name$>>.result_of_making_new_codifier_w_subcodes;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         r.codifier_id:= make_codifier_from_plaincode(par_if_exists, par_reidentify, par_c, VARIADIC par_cf_new_type);
 
         r.subcodes_ids_list:= add_subcodes_under_codifier(make_codekeyl_byid(r.codifier_id), par_cf_dflt_codestr, VARIADIC par_codes_array);
 
-        PERFORM leave_schema_namespace(namespace_info);
         RETURN r;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION  make_codifier_from_plaincode_w_values(
           par_if_exists       boolean
@@ -2740,7 +2697,7 @@ CREATE OR REPLACE FUNCTION mk_name_construction_input(
         , par_description varchar
         ) RETURNS name_construction_input AS $$
         SELECT ROW($1, $2, $3, $4) :: sch_<<$app_name$>>.name_construction_input;
-$$ LANGUAGE SQL;
+$$ LANGUAGE SQL IMMUTABLE;
 
 -------------------------------------------------------------------------------
 
@@ -2750,16 +2707,16 @@ CREATE OR REPLACE FUNCTION add_code_lng_names(
         , VARIADIC par_codesnames_array
                         name_construction_input[]
         )
-RETURNS integer AS $$
+RETURNS integer
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         cnt1 integer;
         cnt2 integer;
         c_id integer;
         dflt_lng_c_id integer;
-        namespace_info sch_<<$app_name$>>.t_namespace_info;
 BEGIN
-        namespace_info := sch_<<$app_name$>>.enter_schema_namespace();
-
         c_id := code_id_of(par_if_exists, par_c);
 
         IF c_id IS NULL THEN
@@ -2767,7 +2724,6 @@ BEGIN
                         RAISE EXCEPTION 'An error occurred, in the function "add_code_lng_names", for code %! Can''t determine target code ID.', show_acodekeyl(par_c);
                 END IF;
 
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN 0;
         ELSE
                 FOR cnt1 IN
@@ -2813,13 +2769,10 @@ BEGIN
 
                 GET DIAGNOSTICS cnt2 = ROW_COUNT;
 
-                PERFORM leave_schema_namespace(namespace_info);
                 RETURN (cnt1 + cnt2);
         END IF;
-
-        PERFORM leave_schema_namespace(namespace_info);
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 COMMENT ON FUNCTION  add_code_lng_names(
           par_if_exists boolean
@@ -2841,74 +2794,79 @@ Hint: use this function source code as a template for your child-tables inheriti
 
 -- Referencing functions:
 
-GRANT EXECUTE ON FUNCTION make_codekey(par_code_id integer, par_code_text varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_codekey_null()TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_codekey_byid(par_code_id integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_codekey_bystr(par_code_text varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_acodekey(par_cf_key t_code_key, par_c_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_acodekey_null()TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_codekeyl(par_key_lng t_code_key, par_code_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_codekeyl_null()TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_codekeyl_byid(par_code_id integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_codekeyl_bystr(par_code_text varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_codekeyl_bystrl(par_lng_key t_code_key, par_code_text varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_acodekeyl(par_key_lng t_code_key, par_cf_key t_code_key, par_c_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_acodekeyl_null()TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_acodekeyl_byid(par_code_id integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_acodekeyl_bystr1(par_code_text varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION make_acodekeyl_bystr2(par_codifier_text varchar, par_code_text varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION optimized_codekey_isit(par_codekey t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION optimized_acodekey_isit(par_acodekey t_addressed_code_key, par_opt_mask integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION optimized_codekeyl_isit(par_codekeyl t_code_key_by_lng, par_opt_mask integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION optimized_acodekeyl_isit(par_acodekeyl t_addressed_code_key_by_lng, par_opt_mask integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION show_codekey(par_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION show_acodekey(par_key t_addressed_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION show_codekeyl(par_key t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION show_acodekeyl(par_key t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION generalize_codekey(par_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION generalize_codekeyl(par_key t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION generalize_acodekey(par_key t_addressed_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION generalize_codekey_wcf(par_cf_codekey t_code_key, par_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION generalize_codekeyl_wcf(par_cf_codekey t_code_key, par_key t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION codekey_type(par_key t_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION acodekey_type(par_key t_addressed_code_key)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION codekeyl_type(par_key t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION acodekeyl_type(par_key t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION mk_name_construction_input(par_lng t_code_key_by_lng, par_name varchar, par_entity t_code_key_by_lng, par_description varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_codekey(par_code_id integer, par_code_text varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_codekey_null() TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_codekey_byid(par_code_id integer) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_codekey_bystr(par_code_text varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_acodekey(par_cf_key t_code_key, par_c_key t_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_acodekey_null() TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_codekeyl(par_key_lng t_code_key, par_code_key t_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_codekeyl_null() TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_codekeyl_byid(par_code_id integer) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_codekeyl_bystr(par_code_text varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_codekeyl_bystrl(par_lng_key t_code_key, par_code_text varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_acodekeyl(par_key_lng t_code_key, par_cf_key t_code_key, par_c_key t_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_acodekeyl_null() TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_acodekeyl_byid(par_code_id integer) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_acodekeyl_bystr1(par_code_text varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION make_acodekeyl_bystr2(par_codifier_text varchar, par_code_text varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimized_codekey_isit(par_codekey t_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimized_acodekey_isit(par_acodekey t_addressed_code_key, par_opt_mask integer) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimized_codekeyl_isit(par_codekeyl t_code_key_by_lng, par_opt_mask integer) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimized_acodekeyl_isit(par_acodekeyl t_addressed_code_key_by_lng, par_opt_mask integer) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION show_codekey(par_key t_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION show_acodekey(par_key t_addressed_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION show_codekeyl(par_key t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION show_acodekeyl(par_key t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION generalize_codekey(par_key t_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION generalize_codekeyl(par_key t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION generalize_acodekey(par_key t_addressed_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION generalize_codekey_wcf(par_cf_codekey t_code_key, par_key t_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION generalize_codekeyl_wcf(par_cf_codekey t_code_key, par_key t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION codekey_type(par_key t_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION acodekey_type(par_key t_addressed_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION codekeyl_type(par_key t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION acodekeyl_type(par_key t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION mk_name_construction_input(par_lng t_code_key_by_lng, par_name varchar, par_entity t_code_key_by_lng, par_description varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 
 -- Lookup functions:
 
-GRANT EXECUTE ON FUNCTION optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_determine_mask integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION optimization_mode_for_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION code_id_of(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION code_id_of_undefined()TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION code_id_of_unclassified()TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION code_id_of_error()TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION code_id_of_ambiguous()TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION code_id_of_language(varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION code_id_of_entity(entity_code_text varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION codifier_id_of(par_if_exists boolean, par_cf_keyl t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION code_belongs_to_codifier(par_if_cf_exists boolean, par_acodekeyl t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION get_code(par_if_exists boolean, par_key t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION codifier_default_code(par_if_exists boolean, par_cf_keyl t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION get_codes_l(par_key t_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION get_nonplaincode_by_str(par_codifier varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION get_code_by_str(par_codifier varchar, par_code varchar)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION get_codes_of_codifier(par_acodekeyl t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION get_codifiers_of_code(par_acodekeyl t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
-GRANT EXECUTE ON FUNCTION find_subcodes(par_if_exists boolean, par_cf_key t_addressed_code_key_by_lng, par_include_code_itself boolean, par_only_ones_not_reachable_from_elsewhere boolean)TO user_<<$app_name$>>_data_admin, user_<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_determine_mask integer) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimization_mode_for_acodekeyl(par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_determination_preference_mask integer, par_imperative_or_mask integer) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION optimize_acodekeyl(par_ifexists boolean, par_acodekeyl t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION code_id_of(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION code_id_of_undefined() TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION code_id_of_unclassified() TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION code_id_of_error() TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION code_id_of_ambiguous() TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION code_id_of_language(varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION code_id_of_entity(entity_code_text varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION codifier_id_of(par_if_exists boolean, par_cf_keyl t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION code_belongs_to_codifier(par_if_cf_exists boolean, par_acodekeyl t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION get_code(par_if_exists boolean, par_key t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION codifier_default_code(par_if_exists boolean, par_cf_keyl t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION get_codes_l(par_key t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION get_nonplaincode_by_str(par_codifier varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION get_code_by_str(par_codifier varchar, par_code varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION get_codes_of_codifier(par_acodekeyl t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION get_codifiers_of_code(par_acodekeyl t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION find_subcodes(par_if_exists boolean, par_cf_key t_addressed_code_key_by_lng, par_include_code_itself boolean, par_only_ones_not_reachable_from_elsewhere boolean) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 
 -- Administration functions:
 
-GRANT EXECUTE ON FUNCTION remove_code(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_remove_code boolean, par_cascade_remove_subcodes boolean, par_if_cascade__only_ones_not_reachable_from_elsewhere boolean)TO user_<<$app_name$>>_data_admin;
-GRANT EXECUTE ON FUNCTION bind_code_to_codifier(par_c_acodekeyl t_addressed_code_key_by_lng, par_cf_codekeyl t_code_key_by_lng, par_dflt boolean)TO user_<<$app_name$>>_data_admin;
-GRANT EXECUTE ON FUNCTION unbind_code_from_codifier(par_if_exists boolean, par_c_acodekeyl t_addressed_code_key_by_lng)TO user_<<$app_name$>>_data_admin;
-GRANT EXECUTE ON FUNCTION new_code_by_userseqs(par_code_construct code_construction_input, par_super_code t_code_key_by_lng, par_dflt_isit boolean, par_codifier_ids_seq_name varchar, par_plaincode_ids_seq_name varchar)TO user_<<$app_name$>>_data_admin;
-GRANT EXECUTE ON FUNCTION new_code(par_code_construct code_construction_input, par_super_code t_code_key_by_lng, par_dflt_isit boolean)TO user_<<$app_name$>>_data_admin;
-GRANT EXECUTE ON FUNCTION add_subcodes_under_codifier(par_cf t_code_key_by_lng, par_cf_dflt_codestr varchar, VARIADIC par_codes_array code_construction_input[])TO user_<<$app_name$>>_data_admin;
-GRANT EXECUTE ON FUNCTION new_codifier_w_subcodes(par_super_cf t_code_key_by_lng, par_cf_construct code_construction_input, par_cf_dflt_codestr varchar, VARIADIC par_codes_array code_construction_input[])TO user_<<$app_name$>>_data_admin;
-GRANT EXECUTE ON FUNCTION make_codifier_from_plaincode(par_if_exists boolean, par_reidentify boolean, par_cf t_code_key_by_lng, par_cf_new_type code_type)TO user_<<$app_name$>>_data_admin;
-GRANT EXECUTE ON FUNCTION make_codifier_from_plaincode_w_values(par_if_exists boolean, par_reidentify boolean, par_c t_code_key_by_lng, par_cf_new_type code_type, par_cf_dflt_codestr varchar, VARIADIC par_codes_array code_construction_input[])TO user_<<$app_name$>>_data_admin;
-GRANT EXECUTE ON FUNCTION add_code_lng_names(par_if_exists boolean, par_c t_addressed_code_key_by_lng, VARIADIC par_codesnames_array name_construction_input[])TO user_<<$app_name$>>_data_admin;
+GRANT EXECUTE ON FUNCTION remove_code(par_if_exists boolean, par_acodekeyl t_addressed_code_key_by_lng, par_remove_code boolean, par_cascade_remove_subcodes boolean, par_if_cascade__only_ones_not_reachable_from_elsewhere boolean)  TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+GRANT EXECUTE ON FUNCTION bind_code_to_codifier(par_c_acodekeyl t_addressed_code_key_by_lng, par_cf_codekeyl t_code_key_by_lng, par_dflt boolean)  TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+GRANT EXECUTE ON FUNCTION unbind_code_from_codifier(par_if_exists boolean, par_c_acodekeyl t_addressed_code_key_by_lng)  TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+GRANT EXECUTE ON FUNCTION new_code_by_userseqs(par_code_construct code_construction_input, par_super_code t_code_key_by_lng, par_dflt_isit boolean, par_codifier_ids_seq_name varchar, par_plaincode_ids_seq_name varchar)  TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+GRANT EXECUTE ON FUNCTION new_code(par_code_construct code_construction_input, par_super_code t_code_key_by_lng, par_dflt_isit boolean)  TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+GRANT EXECUTE ON FUNCTION add_subcodes_under_codifier(par_cf t_code_key_by_lng, par_cf_dflt_codestr varchar, VARIADIC par_codes_array code_construction_input[])  TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+GRANT EXECUTE ON FUNCTION new_codifier_w_subcodes(par_super_cf t_code_key_by_lng, par_cf_construct code_construction_input, par_cf_dflt_codestr varchar, VARIADIC par_codes_array code_construction_input[])  TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+GRANT EXECUTE ON FUNCTION make_codifier_from_plaincode(par_if_exists boolean, par_reidentify boolean, par_cf t_code_key_by_lng, par_cf_new_type code_type)  TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+GRANT EXECUTE ON FUNCTION make_codifier_from_plaincode_w_values(par_if_exists boolean, par_reidentify boolean, par_c t_code_key_by_lng, par_cf_new_type code_type, par_cf_dflt_codestr varchar, VARIADIC par_codes_array code_construction_input[])  TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+GRANT EXECUTE ON FUNCTION add_code_lng_names(par_if_exists boolean, par_c t_addressed_code_key_by_lng, VARIADIC par_codesnames_array name_construction_input[])  TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+\echo NOTICE >>>>> functions.init.sql [END]

@@ -1,9 +1,19 @@
 Name: Codifier
 Description: 
+      An extension to ENUM.
       Tables "codes" and "codifiers" for storing standard sets 
       of constat values, status sets, etc. F.e., codifier "Colors" may contain
       codes: "Red", "Green", "Blue". 
-Version: 0.5.4
+      Any codifier may be a code of another codifier. 
+      Thus codes may be ordered in form tree structures and 
+      even directed graph structures.
+      Package also contains abstract parent tables "names" and "named_in_lng".
+      Table "named_in_lng" is a child of "names" and is connected 
+      with "Languages" codifier. Table "codes_names" is a selfexample of usage 
+      of codifiers and being a correct child of "named_in_lng" - it stores 
+      humanreadable names, descriptions and comments on any codes and 
+      codifiers in various languages.
+Version: 0.6
 License: BSD3
 Copyright: Copyright (c) 2010 Andrejs Sisojevs
 License-File: variant/docs/licence/COPYRIGHT

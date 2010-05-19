@@ -81,3 +81,10 @@ Changes from 0.5.3 to 0.5.4
       **   languages codes IDs are at  80000-89999
       ** nameable entities IDs are at  90000-99999
       **          reserved IDs are at      0-  999
+
+
+Changes from 0.5.4 to 0.6.0
+--------------------------------------------
+* Migrated on Standard v0.3 (from v0.2) 
+* Migrated on DBP-tpl template v0.4 (from v0.3). Some code reorganization. 
+* Got rid of enter_schema_namespace() and added some IMMUTABLE hints.

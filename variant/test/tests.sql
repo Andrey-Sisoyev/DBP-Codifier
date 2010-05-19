@@ -2,18 +2,24 @@
 --
 -- All rights reserved.
 --
--- For information about license see COPYING file in the root directory of current nominal package
+-- For license and copyright information, see the file COPYRIGHT
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
 
-\c <<$db_name$>> user_<<$app_name$>>_data_admin
+\c <<$db_name$>> user_db<<$db_name$>>_app<<$app_name$>>_owner
 
-SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
-\set ECHO queries
 SELECT set_config('client_min_messages', 'NOTICE', FALSE);
 
-\echo WARNING!!! This tester is not guaranteed to be safe for user data - do not apply it where user already defined it's codes!!
+\echo NOTICE >>>>>> tests.sql [BEGIN]
+\echo WARNING!!! This tester is not guaranteed to be safe for user data (if not said otherwise in package info file) - do not apply it where user already defined it's codes!!
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+\echo --------------------------------------------------------------
+\echo NOTICE >>>>>> Just in case... if anything is lost, at least one will be able to recover it from log...
 
 SELECT * FROM codes;
 SELECT * FROM codes_tree;
@@ -99,13 +105,16 @@ SELECT 'cf_nm (+l_nm)'       = acodekeyl_type(make_acodekeyl(make_codekey_bystr(
 
 \echo =======Testing administration and lookup functions===========
 
-\c <<$db_name$>> user_<<$app_name$>>_owner
+\c <<$db_name$>> user_db<<$db_name$>>_app<<$app_name$>>_owner
 
-SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
 \set ECHO queries
 SELECT set_config('client_min_messages', 'NOTICE', FALSE);
 
-CREATE OR REPLACE FUNCTION remove_test_set() RETURNS integer AS $$
+\set ECHO none
+CREATE OR REPLACE FUNCTION remove_test_set() RETURNS integer
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         out_r RECORD;
 BEGIN
@@ -116,14 +125,18 @@ BEGIN
 
         RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 \echo >>File: docs/models/Testing.CodesStructure.ver.odg
-CREATE OR REPLACE FUNCTION create_test_set() RETURNS integer AS $$
+
+CREATE OR REPLACE FUNCTION create_test_set() RETURNS integer
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
 DECLARE
         out_r RECORD;
 BEGIN
-        PERFORM remove_test_set();
+        PERFORM sch_<<$app_name$>>.remove_test_set();
 
         SELECT new_codifier_w_subcodes(
                         make_codekeyl_bystr('Root')
@@ -341,11 +354,13 @@ BEGIN
 
         RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$;
+GRANT EXECUTE ON FUNCTION create_test_set() TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+GRANT EXECUTE ON FUNCTION remove_test_set() TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
 
-\c <<$db_name$>> user_<<$app_name$>>_data_admin
+\set ECHO queries
+\c <<$db_name$>> user_db<<$db_name$>>_app<<$app_name$>>_data_admin
 
-SET search_path TO sch_<<$app_name$>>, public; -- sets only for current session
 \set ECHO queries
 SELECT set_config('client_min_messages', 'NOTICE', FALSE);
 
@@ -1181,16 +1196,15 @@ SELECT code_belongs_to_codifier(FALSE, make_acodekeyl_bystr2('Common nominal cod
 
 \echo =======Cleaning up after testing=============================
 
-\c <<$db_name$>> user_<<$app_name$>>_owner
-SET search_path TO sch_<<$app_name$>>, public;
+\c <<$db_name$>> user_db<<$db_name$>>_app<<$app_name$>>_owner
 \set ECHO queries
 SELECT set_config('client_min_messages', 'NOTICE', FALSE);
 
 DROP FUNCTION remove_test_set();
 DROP FUNCTION create_test_set();
 
-ALTER SEQUENCE   codifiers_ids_seq RESTART WITH 100;
-ALTER SEQUENCE plain_codes_ids_seq RESTART WITH 10000;
+ALTER SEQUENCE codifiers_ids_seq   MINVALUE   1000 RESTART WITH   1000 INCREMENT BY 10;
+ALTER SEQUENCE plain_codes_ids_seq MINVALUE 100000 RESTART WITH 100000 INCREMENT BY 10;
 
 SELECT * FROM codes;
 SELECT * FROM codes_tree;
@@ -1198,3 +1212,6 @@ SELECT * FROM codes_names;
 
 \echo =======Clean up after testing finished=======================
 
+\echo --------------------------------------------------------------
+
+\echo NOTICE >>>>>> tests.sql [END]
