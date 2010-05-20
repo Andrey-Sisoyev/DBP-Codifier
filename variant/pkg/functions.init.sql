@@ -2173,7 +2173,33 @@ BEGIN
               , ARRAY[root_c.code_id]
               , FALSE
               );
-        initial_scope:= ARRAY(
+
+        IF NOT par_only_ones_not_reachable_from_elsewhere THEN
+                -- duplicate query under ELSE there is
+                RETURN QUERY
+                        WITH RECURSIVE subcodes(code_id, code_text, code_type, default_ist, tree_depth, nodes_path, path_terminated_with_cycle) AS (
+                            SELECT root_codes_tree_node.*
+                          UNION ALL
+                            SELECT ct.subcode_id                  AS code_id
+                                 , c.code_text                    AS code_text
+                                 , c.code_type                    AS code_type
+                                 , ct.dflt_subcode_isit           AS default_ist
+                                 , sc.tree_depth + 1              AS tree_depth
+                                 , sc.nodes_path || ct.subcode_id AS nodes_path
+                                 , sc.nodes_path @> ARRAY[ct.subcode_id] AS path_terminated_with_cycle
+                            FROM sch_<<$app_name$>>.codes_tree AS ct
+                               , sch_<<$app_name$>>.codes      AS  c
+                               , subcodes AS sc
+                            WHERE NOT path_terminated_with_cycle
+                              AND ct.supercode_id = sc.code_id
+                              AND c.code_id = ct.subcode_id
+                        )
+                        SELECT code_id, code_text, code_type, default_ist, tree_depth, nodes_path, path_terminated_with_cycle
+                        FROM subcodes
+                        WHERE (tree_depth != 0 OR par_include_code_itself);
+        ELSE
+                -- duplicate query before ELSE there is
+                initial_scope:= ARRAY(
                         WITH RECURSIVE subcodes(code_id, code_text, code_type, default_ist, tree_depth, nodes_path, path_terminated_with_cycle) AS (
                             SELECT root_codes_tree_node.*
                           UNION ALL
@@ -2196,12 +2222,6 @@ BEGIN
                         WHERE (tree_depth != 0 OR par_include_code_itself)
                 );
 
-        IF NOT par_only_ones_not_reachable_from_elsewhere THEN
-                RETURN QUERY
-                        SELECT *
-                        FROM unnest(initial_scope) AS x
-                        WHERE (x.code_id != root_c.code_id OR par_include_code_itself);
-        ELSE
                 initial_scope_ids:= ARRAY(
                         SELECT DISTINCT code_id
                         FROM unnest(initial_scope) AS x
@@ -2255,6 +2275,306 @@ There is a case when find_code won''t return anything for case,
 when "par_only_ones_not_reachable_from_elsewhere" is TRUE:
 if there exist paths A->X, X->A, B->X, but path A->B does not exist.
 Nothing is found in this case, because anything reachable from A is also reachable from B.
+';
+
+-------------------------------------------------------------------------------
+
+CREATE TYPE t_inter_code_sign___ AS (
+                code_id     integer
+              , code_text   varchar
+              , code_type   code_type
+              );
+
+COMMENT ON TYPE t_inter_code_sign___ IS 'For internal use.';
+
+
+CREATE OR REPLACE FUNCTION find_subcodes(
+          par_if_exists boolean
+        , par_cf_key    t_addressed_code_key_by_lng
+        , par_in_scope_of_cf_key  t_code_key_by_lng
+        , par_include_code_itself
+                        boolean
+        , par_only_ones_not_reachable_from_elsewhere
+                        boolean
+        ) RETURNS SETOF codes_tree_node
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
+DECLARE
+        max_dpth             integer;
+        root_c               sch_<<$app_name$>>.codes%ROWTYPE;
+        root_codes_tree_node sch_<<$app_name$>>.codes_tree_node;
+        initial_scope        sch_<<$app_name$>>.codes_tree_node[];
+        initial_scope_ids    integer[];
+        shared_subcodes      integer[];
+        excluded_subcodes    integer[];
+        scope_c_id           integer;
+        under_scope_c        sch_<<$app_name$>>.t_inter_code_sign___[];
+BEGIN
+        scope_c_id:= codifier_id_of(par_if_exists, par_in_scope_of_cf_key);
+        root_c:= get_code(par_if_exists, par_cf_key);
+        IF root_c IS NULL OR scope_c_id IS NULL THEN
+                RETURN;
+        END IF;
+        root_codes_tree_node:= ROW(
+                root_c.code_id
+              , root_c.code_text
+              , root_c.code_type
+              , TRUE
+              , 0
+              , ARRAY[root_c.code_id]
+              , FALSE
+              );
+
+        under_scope_c:= ARRAY(
+                SELECT c.code_id, c.code_text, c.code_type
+                FROM sch_<<$app_name$>>.codes_tree AS ct, sch_<<$app_name$>>.codes AS c
+                WHERE ct.supercode_id = scope_c_id
+                  AND ct.subcode_id = c.code_id
+        );
+
+        IF par_include_code_itself THEN
+            IF root_c.code_id IN (SELECT c.code_id FROM unnest(under_scope_c)) IS DISTINCT FROM TRUE THEN
+                RETURN;
+        END IF; END IF;
+
+        IF NOT par_only_ones_not_reachable_from_elsewhere THEN
+                RETURN QUERY
+                        WITH RECURSIVE subcodes(code_id, code_text, code_type, default_ist, tree_depth, nodes_path, path_terminated_with_cycle) AS (
+                            SELECT root_codes_tree_node.*
+                          UNION ALL
+                            SELECT ct.subcode_id                  AS code_id
+                                 , c.code_text                    AS code_text
+                                 , c.code_type                    AS code_type
+                                 , ct.dflt_subcode_isit           AS default_ist
+                                 , sc.tree_depth + 1              AS tree_depth
+                                 , sc.nodes_path || ct.subcode_id AS nodes_path
+                                 , sc.nodes_path @> ARRAY[ct.subcode_id] AS path_terminated_with_cycle
+                            FROM sch_<<$app_name$>>.codes_tree AS ct
+                               , unnest(under_scope_c)         AS  c
+                               , subcodes AS sc
+                            WHERE NOT path_terminated_with_cycle
+                              AND ct.supercode_id = sc.code_id
+                              AND c.code_id = ct.subcode_id
+                        )
+                        SELECT code_id, code_text, code_type, default_ist, tree_depth, nodes_path, path_terminated_with_cycle
+                        FROM subcodes
+                        WHERE (tree_depth != 0 OR par_include_code_itself);
+        ELSE
+                initial_scope:= ARRAY(
+                        WITH RECURSIVE subcodes(code_id, code_text, code_type, default_ist, tree_depth, nodes_path, path_terminated_with_cycle) AS (
+                            SELECT root_codes_tree_node.*
+                          UNION ALL
+                            SELECT ct.subcode_id                  AS code_id
+                                 , c.code_text                    AS code_text
+                                 , c.code_type                    AS code_type
+                                 , ct.dflt_subcode_isit           AS default_ist
+                                 , sc.tree_depth + 1              AS tree_depth
+                                 , sc.nodes_path || ct.subcode_id AS nodes_path
+                                 , sc.nodes_path @> ARRAY[ct.subcode_id] AS path_terminated_with_cycle
+                            FROM sch_<<$app_name$>>.codes_tree AS ct
+                               , unnest(under_scope_c)         AS  c
+                               , subcodes AS sc
+                            WHERE NOT path_terminated_with_cycle
+                              AND ct.supercode_id = sc.code_id
+                              AND c.code_id = ct.subcode_id
+                        )
+                        SELECT ROW(code_id, code_text, code_type, default_ist, tree_depth, nodes_path, path_terminated_with_cycle) :: codes_tree_node
+                        FROM subcodes
+                        WHERE (tree_depth != 0 OR par_include_code_itself)
+                );
+
+                initial_scope_ids:= ARRAY(
+                        SELECT DISTINCT code_id
+                        FROM unnest(initial_scope) AS x
+                        );
+                shared_subcodes := ARRAY(
+                        SELECT DISTINCT subcode_id
+                        FROM sch_<<$app_name$>>.codes_tree
+                        WHERE     initial_scope_ids @> ARRAY[subcode_id]
+                          AND NOT initial_scope_ids @> ARRAY[supercode_id]
+                          AND     supercode_id != scope_c_id
+                          AND     supercode_id != root_c.code_id
+                          AND       subcode_id != root_c.code_id
+                );
+
+                excluded_subcodes:= ARRAY(
+                        SELECT DISTINCT x.code_id
+                        FROM unnest(initial_scope) AS x
+                        WHERE (x.nodes_path && shared_subcodes)
+                );
+
+                RETURN QUERY
+                        SELECT x.*
+                        FROM unnest(initial_scope) AS x
+                        WHERE NOT (ARRAY[x.code_id] <@ excluded_subcodes)
+                          AND (x.code_id != root_c.code_id OR par_include_code_itself);
+        END IF;
+        RETURN;
+END;
+$$;
+
+COMMENT ON FUNCTION find_subcodes(
+          par_if_exists boolean
+        , par_cf_key    t_addressed_code_key_by_lng
+        , par_in_scope_of_cf_key  t_code_key_by_lng
+        , par_include_code_itself
+                        boolean
+        , par_only_ones_not_reachable_from_elsewhere
+                        boolean
+        ) IS
+'Specific extension of "find_subcodes" function. Here all results must belong to codifier addressed by the "par_in_scope_of_cf_key" parameter.
+If "par_in_scope_of_cf_key" addresses no codifier, results set is empty.
+If "par_in_scope_of_cf_key" is found during the search, it is not included in results and search won''continue for this subbranch.
+If "par_include_code_itself" IS TRUE and code addressed by "par_cf_key" doesn''t belong to scope codifier, then resulting set is empty.
+The behavior associated with "par_only_ones_not_reachable_from_elsewhere" now ignores "par_in_scope_of_cf_key" (it doesn''t belong to "elswhere").
+
+';
+
+-------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION find_supercodes(
+          par_if_exists boolean
+        , par_c_key     t_addressed_code_key_by_lng
+        , par_in_scope_of_cf_key
+                        t_code_key_by_lng
+        , par_include_code_itself
+                        boolean
+        , par_only_ones_not_reachable_from_elsewhere
+                        boolean
+        ) RETURNS SETOF codes_tree_node
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
+DECLARE
+        max_dpth             integer;
+        root_c               sch_<<$app_name$>>.codes%ROWTYPE;
+        root_codes_tree_node sch_<<$app_name$>>.codes_tree_node;
+        initial_scope        sch_<<$app_name$>>.codes_tree_node[];
+        initial_scope_ids    integer[];
+        shared_subcodes      integer[];
+        excluded_subcodes    integer[];
+        scope_c_id           integer;
+        under_scope_c        sch_<<$app_name$>>.t_inter_code_sign___[];
+BEGIN
+        scope_c_id:= codifier_id_of(par_if_exists, par_in_scope_of_cf_key);
+        root_c:= get_code(par_if_exists, par_cf_key);
+        IF root_c IS NULL OR scope_c_id IS NULL THEN
+                RETURN;
+        END IF;
+        root_codes_tree_node:= ROW(
+                root_c.code_id
+              , root_c.code_text
+              , root_c.code_type
+              , TRUE
+              , 0
+              , ARRAY[root_c.code_id]
+              , FALSE
+              );
+
+        under_scope_c:= ARRAY(
+                SELECT c.code_id, c.code_text, c.code_type
+                FROM sch_<<$app_name$>>.codes_tree AS ct, sch_<<$app_name$>>.codes AS c
+                WHERE ct.supercode_id = scope_c_id
+                  AND ct.subcode_id = c.code_id
+        );
+
+        IF par_include_code_itself THEN
+            IF root_c.code_id IN (SELECT c.code_id FROM unnest(under_scope_c)) IS DISTINCT FROM TRUE THEN
+                RETURN;
+        END IF; END IF;
+
+        IF NOT par_only_ones_not_reachable_from_elsewhere THEN
+                RETURN QUERY
+                        WITH RECURSIVE supercodes(code_id, code_text, code_type, default_ist, tree_depth, nodes_path, path_terminated_with_cycle) AS (
+                            SELECT root_codes_tree_node.*
+                          UNION ALL
+                            SELECT ct.supercode_id                AS code_id
+                                 , c.code_text                    AS code_text
+                                 , c.code_type                    AS code_type
+                                 , ct.dflt_subcode_isit           AS default_ist
+                                 , sc.tree_depth - 1              AS tree_depth
+                                 , sc.nodes_path || ct.supercode_id        AS nodes_path
+                                 , sc.nodes_path @> ARRAY[ct.supercode_id] AS path_terminated_with_cycle
+                            FROM sch_<<$app_name$>>.codes_tree AS ct
+                               , unnest(under_scope_c)         AS  c
+                               , supercodes AS sc
+                            WHERE NOT path_terminated_with_cycle
+                              AND ct.subcode_id = sc.code_id
+                              AND c.code_id = ct.supercode_id
+                              AND ct.supercode_id != scope_c_id
+                        )
+                        SELECT code_id, code_text, code_type, default_ist, tree_depth, nodes_path, path_terminated_with_cycle
+                        FROM supercodes
+                        WHERE (tree_depth != 0 OR par_include_code_itself);
+        ELSE
+                initial_scope:= ARRAY(
+                        WITH RECURSIVE supercodes(code_id, code_text, code_type, default_ist, tree_depth, nodes_path, path_terminated_with_cycle) AS (
+                            SELECT root_codes_tree_node.*
+                          UNION ALL
+                            SELECT ct.supercode_id                AS code_id
+                                 , c.code_text                    AS code_text
+                                 , c.code_type                    AS code_type
+                                 , ct.dflt_subcode_isit           AS default_ist
+                                 , sc.tree_depth - 1              AS tree_depth
+                                 , sc.nodes_path || ct.supercode_id        AS nodes_path
+                                 , sc.nodes_path @> ARRAY[ct.supercode_id] AS path_terminated_with_cycle
+                            FROM sch_<<$app_name$>>.codes_tree AS ct
+                               , unnest(under_scope_c)         AS  c
+                               , supercodes AS sc
+                            WHERE NOT path_terminated_with_cycle
+                              AND ct.subcode_id = sc.code_id
+                              AND c.code_id = ct.supercode_id
+                              AND ct.supercode_id != scope_c_id
+                        )
+                        SELECT ROW(code_id, code_text, code_type, default_ist, tree_depth, nodes_path, path_terminated_with_cycle) :: codes_tree_node
+                        FROM supercodes
+                        WHERE (tree_depth != 0 OR par_include_code_itself)
+                );
+
+                initial_scope_ids:= ARRAY(
+                        SELECT DISTINCT code_id
+                        FROM unnest(initial_scope) AS x
+                        );
+                shared_subcodes := ARRAY(
+                        SELECT DISTINCT subcode_id
+                        FROM sch_<<$app_name$>>.codes_tree
+                        WHERE     initial_scope_ids @> ARRAY[subcode_id]
+                          AND NOT initial_scope_ids @> ARRAY[supercode_id]
+                          AND     supercode_id != scope_c_id
+                          AND     supercode_id != root_c.code_id
+                          AND       subcode_id != root_c.code_id
+                );
+
+                excluded_subcodes:= ARRAY(
+                        SELECT DISTINCT x.code_id
+                        FROM unnest(initial_scope) AS x
+                        WHERE (x.nodes_path && shared_subcodes)
+                );
+
+                RETURN QUERY
+                        SELECT x.*
+                        FROM unnest(initial_scope) AS x
+                        WHERE NOT (ARRAY[x.code_id] <@ excluded_subcodes)
+                          AND (x.code_id != root_c.code_id OR par_include_code_itself);
+        END IF;
+        RETURN;
+END;
+$$;
+
+COMMENT ON FUNCTION find_supercodes(
+          par_if_exists boolean
+        , par_c_key     t_addressed_code_key_by_lng
+        , par_in_scope_of_cf_key  t_code_key_by_lng
+        , par_include_code_itself
+                        boolean
+        , par_only_ones_not_reachable_from_elsewhere
+                        boolean
+        ) IS
+'Specific modification of "find_subcodes" function. Here search is performed in opposite direction, and all results must belong to codifier addressed by the "par_in_scope_of_cf_key" parameter.
+If "par_in_scope_of_cf_key" addresses no codifier, results set is empty.
+The search for the supercodes won''t consider "par_in_scope_of_cf_key" as includable in results set, and, thus, won''t include anything superer than that.
+The behavior associated with "par_only_ones_not_reachable_from_elsewhere" now ignores "par_in_scope_of_cf_key" (it doesn''t belong to "elswhere").
 ';
 
 --------------------------------------------------------------------------
@@ -2852,6 +3172,26 @@ GRANT EXECUTE ON FUNCTION get_code_by_str(par_codifier varchar, par_code varchar
 GRANT EXECUTE ON FUNCTION get_codes_of_codifier(par_acodekeyl t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION get_codifiers_of_code(par_acodekeyl t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION find_subcodes(par_if_exists boolean, par_cf_key t_addressed_code_key_by_lng, par_include_code_itself boolean, par_only_ones_not_reachable_from_elsewhere boolean) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION find_subcodes(
+          par_if_exists boolean
+        , par_cf_key    t_addressed_code_key_by_lng
+        , par_in_scope_of_cf_key  t_code_key_by_lng
+        , par_include_code_itself
+                        boolean
+        , par_only_ones_not_reachable_from_elsewhere
+                        boolean
+        ) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION find_supercodes(
+          par_if_exists boolean
+        , par_c_key     t_addressed_code_key_by_lng
+        , par_in_scope_of_cf_key
+                        t_code_key_by_lng
+        , par_include_code_itself
+                        boolean
+        , par_only_ones_not_reachable_from_elsewhere
+                        boolean
+        ) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+
 
 -- Administration functions:
 

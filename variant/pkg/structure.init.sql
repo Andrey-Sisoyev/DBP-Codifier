@@ -63,15 +63,18 @@ CREATE TABLE codes (
       , additional_field_2 varchar       NULL
       , additional_field_3 varchar       NULL
       , additional_field_4 varchar       NULL
-      , additional_field_5 varchar       NULL
 ) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
 
 CREATE INDEX codestexts_in_codes_idx ON codes(code_text) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs;
 
 CREATE TABLE codes_tree (
-        supercode_id      integer NOT NULL REFERENCES codes (code_id) ON DELETE CASCADE ON UPDATE CASCADE
-      , subcode_id        integer NOT NULL REFERENCES codes (code_id) ON DELETE CASCADE ON UPDATE CASCADE
-      , dflt_subcode_isit boolean NOT NULL DEFAULT FALSE
+        supercode_id       integer NOT NULL REFERENCES codes (code_id) ON DELETE CASCADE ON UPDATE CASCADE
+      , subcode_id         integer NOT NULL REFERENCES codes (code_id) ON DELETE CASCADE ON UPDATE CASCADE
+      , dflt_subcode_isit  boolean NOT NULL DEFAULT FALSE
+      , additional_field_1 varchar       NULL
+      , additional_field_2 varchar       NULL
+      , additional_field_3 varchar       NULL
+      , additional_field_4 varchar       NULL
       , PRIMARY KEY (supercode_id, subcode_id)
 ) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
 

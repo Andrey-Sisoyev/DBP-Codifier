@@ -81,6 +81,26 @@ DROP FUNCTION IF EXISTS get_code_by_str(par_codifier varchar, par_code varchar);
 DROP FUNCTION IF EXISTS get_codes_of_codifier(par_acodekeyl t_addressed_code_key_by_lng);
 DROP FUNCTION IF EXISTS get_codifiers_of_code(par_acodekeyl t_addressed_code_key_by_lng);
 DROP FUNCTION IF EXISTS find_subcodes(par_if_exists boolean, par_cf_key t_addressed_code_key_by_lng, par_include_code_itself boolean, par_only_ones_not_reachable_from_elsewhere boolean);
+DROP FUNCTION IF EXISTS find_subcodes(
+          par_if_exists boolean
+        , par_cf_key    t_addressed_code_key_by_lng
+        , par_in_scope_of_cf_key  t_code_key_by_lng
+        , par_include_code_itself
+                        boolean
+        , par_only_ones_not_reachable_from_elsewhere
+                        boolean
+        );
+DROP FUNCTION IF EXISTS find_supercodes(
+          par_if_exists boolean
+        , par_c_key     t_addressed_code_key_by_lng
+        , par_in_scope_of_cf_key
+                        t_code_key_by_lng
+        , par_include_code_itself
+                        boolean
+        , par_only_ones_not_reachable_from_elsewhere
+                        boolean
+        );
+
 
 -- Administration functions:
 
@@ -99,6 +119,7 @@ DROP FUNCTION IF EXISTS add_code_lng_names(par_if_exists boolean, par_c t_addres
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
+DROP TYPE IF EXISTS t_inter_code_sign___;
 DROP TYPE IF EXISTS name_construction_input;
 DROP TYPE IF EXISTS result_of_making_new_codifier_w_subcodes;
 DROP TYPE IF EXISTS code_construction_input;
