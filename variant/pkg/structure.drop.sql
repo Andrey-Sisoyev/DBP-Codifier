@@ -48,6 +48,21 @@ ALTER TABLE codes_names ALTER COLUMN entity DROP DEFAULT;
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
+DROP INDEX IF EXISTS dedicated_codifiertables_cfid_idx;
+DROP INDEX IF EXISTS dedicated_codifiertables_toid_idx;
+
+ALTER TABLE dedicated_codifiertables
+        DROP CONSTRAINT cnstr_tableoid_is_in_this_schema
+      , DROP CONSTRAINT cnstr_cf_accord_w_dedicated_codifiertable;
+
+ALTER TABLE languages
+        DROP CONSTRAINT cnstr_dct_row_belongs_to_codifiers
+      , DROP CONSTRAINT cnstr_dct_code_text_is_valid;
+
+
+SELECT remove_dedicated_codifiertable(make_codekeyl_null(), 'languages', TRUE);
+DROP TABLE IF EXISTS dedicated_codifiertables CASCADE;
+
 \i functions.drop.sql
 \i triggers.drop.sql
 

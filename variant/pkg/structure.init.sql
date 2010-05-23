@@ -170,14 +170,46 @@ CREATE TABLE codes_names (
 ) INHERITS (named_in_languages)
   TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
 
--------------------------------------
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
-\echo NOTICE >>>>> structure.init.sql [END]
+CREATE TABLE languages (
+          code_id     integer PRIMARY KEY
+        , code_text   varchar NOT NULL UNIQUE USING INDEX TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs
+        , FOREIGN KEY (code_id) REFERENCES codes(code_id) ON DELETE CASCADE ON UPDATE CASCADE
+) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
+
+COMMENT ON TABLE languages IS 'Dedicated codifier-table. Registered in "dedicated_codifiertables" table. Do not DROP it directly, use "remove_dedicated_codifiertable(par_cf_key t_code_key_by_lng, par_tablename regclass)" function instead !!!';
+
+----------------------
+
+CREATE TABLE dedicated_codifiertables (
+        dedicated_codifiertable_id serial PRIMARY KEY
+      , codifier_id   integer  NOT NULL
+      , table_oid     oid      NOT NULL -- REFERENCES pg_class(oid) ON DELETE RESTRICT ON UPDATE CASCADE
+      , codifier_text varchar  NOT NULL
+      , full_indexing boolean  NOT NULL
+      , FOREIGN KEY (codifier_id) REFERENCES codes(code_id) ON DELETE CASCADE ON UPDATE CASCADE
+) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
+
+COMMENT ON TABLE dedicated_codifiertables IS
+'For speeding up work with codifiers we may want to put duplicate their contents in dedicated tables.
+Data model: data is primarily kept in tables "codes" and "codes_tree"; we make dedicated codifier-table that has foreign key referencing "codes(code_id, code_text)".
+We register such dedicated tables in the "dedicated_codifiertables" table, so that now it is possible to automatize control of content of dedicated codifier-tables.
+We wouldn''t have needed such complications, if code_text field hadn''t complex uniqueness rule, - because of that we have to emulate FOREIGN KEY (code_text) using triggers.
+Also, with the accounting of dedicated codifier-tables we emulate such FOREIGN KEY rule as ON UPDATE CASCADE for "code_text", and, if "full_indexing" is TRUE, new rule: on new code under target codifier insert corresponding entry in dedicated codifier-table.
+Notice:
+  SELECT p.relname, ic.* FROM pg_class AS p, dedicated_codifiertables AS ic WHERE p.oid = ic.table_oid;
+';
+
+CREATE INDEX dedicated_codifiertables_cfid_idx ON dedicated_codifiertables(codifier_id) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs;
+CREATE INDEX dedicated_codifiertables_toid_idx ON dedicated_codifiertables(table_oid)   TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs;
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
 \i functions.init.sql
+\i triggers.init.sql
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
@@ -196,15 +228,25 @@ ALTER TABLE names
 
 ALTER TABLE named_in_languages
         ADD CONSTRAINT named_in_languages__lng_codekey
-                CHECK (code_belongs_to_codifier(
-                                FALSE
-                              , make_acodekeyl(
-                                          make_codekey_null()
-                                        , make_codekey_bystr('Languages')
-                                        , make_codekey_byid(lng_of_name)
-                      )         )       );
+                FOREIGN KEY (lng_of_name) REFERENCES languages(code_id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
--------------------------------------
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+\i ../data/data.init.sql
+
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+ALTER TABLE dedicated_codifiertables
+        ADD CONSTRAINT cnstr_tableoid_is_in_this_schema CHECK(tableoid_is_in_this_schema(table_oid) IS NOT DISTINCT FROM TRUE)
+      , ADD CONSTRAINT cnstr_cf_accord_w_dedicated_codifiertable CHECK(check_cf_accord_w_dedicated_codifiertable(dedicated_codifiertable_id, make_codekey(codifier_id, codifier_text), table_oid));
+
+ALTER TABLE languages
+        ADD CONSTRAINT cnstr_dct_row_belongs_to_codifiers CHECK (dct_row_belongsnot_to_codifiers(tableoid, code_id) IS DISTINCT FROM TRUE)
+      , ADD CONSTRAINT cnstr_dct_code_text_is_valid CHECK (dct_code_text_is_valid(code_id, code_text) IS NOT DISTINCT FROM TRUE);
+
+SELECT new_dedicated_codifiertable(make_codekeyl_bystr('Languages'), 'languages', TRUE, TRUE) AS new_dedicated_codifiertable__languages;
 
 GRANT USAGE ON SEQUENCE codifiers_ids_seq   TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
 GRANT USAGE ON SEQUENCE plain_codes_ids_seq TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
@@ -217,6 +259,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE codes_tree         TO user_db<<$db
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE named_in_languages TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE codes_names        TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE names              TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE dedicated_codifiertables TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE languages          TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin;
 
 GRANT SELECT                         ON TABLE codes              TO user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT SELECT                         ON TABLE codes_names        TO user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
@@ -224,10 +268,10 @@ GRANT SELECT                         ON TABLE codes_tree         TO user_db<<$db
 GRANT SELECT                         ON TABLE named_in_languages TO user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT SELECT                         ON TABLE codes_names        TO user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT SELECT                         ON TABLE names              TO user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT SELECT                         ON TABLE dedicated_codifiertables TO user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT SELECT                         ON TABLE languages          TO user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
--- Sometimes we want to insert some data, before creating triggers.
 
-\i triggers.init.sql
-\i ../data/data.init.sql
+\echo NOTICE >>>>> structure.init.sql [END]

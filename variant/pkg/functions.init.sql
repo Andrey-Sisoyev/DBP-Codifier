@@ -17,12 +17,6 @@ SET search_path TO sch_<<$app_name$>>, comn_funs, public; -- sets only for curre
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
--- \i modules/module1.init.sql
--- \i modules/module2.init.sql
-
--------------------------------------------------------------------------------
--------------------------------------------------------------------------------
-
 \echo NOTICE >>>>> functions.init.sql [BEGIN]
 
 -- Referencing functions:
@@ -201,11 +195,27 @@ CREATE OR REPLACE FUNCTION generalize_codekey(par_key t_code_key) RETURNS t_addr
                       );
 $$ LANGUAGE SQL IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION generalize_codekey_ascf(par_key t_code_key) RETURNS t_addressed_code_key_by_lng AS $$
+        SELECT sch_<<$app_name$>>.make_acodekeyl(
+                        sch_<<$app_name$>>.make_codekey_null()
+                      , $1
+                      , sch_<<$app_name$>>.make_codekey_null()
+                      );
+$$ LANGUAGE SQL IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION generalize_codekeyl(par_key t_code_key_by_lng) RETURNS t_addressed_code_key_by_lng AS $$
         SELECT sch_<<$app_name$>>.make_acodekeyl(
                         ($1).key_lng
                       , sch_<<$app_name$>>.make_codekey_null()
                       , ($1).code_key
+                      );
+$$ LANGUAGE SQL IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION generalize_codekeyl_ascf(par_key t_code_key_by_lng) RETURNS t_addressed_code_key_by_lng AS $$
+        SELECT sch_<<$app_name$>>.make_acodekeyl(
+                        ($1).key_lng
+                      , ($1).code_key
+                      , sch_<<$app_name$>>.make_codekey_null()
                       );
 $$ LANGUAGE SQL IMMUTABLE;
 
@@ -840,21 +850,17 @@ BEGIN
                                                 v_acodekeyl.codifier_key := tmp_codekey;
                                         END IF;
                                     WHEN 'c_nm (-l,-cf)' THEN
-                                        SELECT cf_n.code_id, c_lng.code_id
+                                        SELECT cf_n.code_id, c_lng.language_code_id
                                         INTO v_codifier_id, v_language_id
                                         FROM codes_tree  AS ct
                                            , codes_names AS cf_n
-                                           , codes       AS c_lng
-                                           , codes       AS c_lng_cf
-                                           , codes_tree  AS c_lng_ct
+                                           , languages   AS c_lng
                                         WHERE ct.supercode_id  = cf_n.code_id
                                           AND ct.subcode_id    = (v_acodekeyl.code_key).code_id
                                           AND cf_n.lng_of_name = c_lng.code_id
-                                          AND c_lng.code_text  = (v_acodekeyl.key_lng).code_text
-                                          AND cf_n.name        = (v_acodekeyl.codifier_key).code_text
-                                          AND c_lng_ct.subcode_id = c_lng.code_id
-                                          AND c_lng_ct.supercode_id = c_lng_cf.code_id
-                                          AND c_lng_cf.code_text  = 'Languages';
+                                          AND c_lng.code_text
+                                                               = (v_acodekeyl.key_lng).code_text
+                                          AND cf_n.name        = (v_acodekeyl.codifier_key).code_text;
 
                                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
@@ -1058,16 +1064,12 @@ BEGIN
                         FROM codes       AS cf
                            , codes_names AS cf_n
                            , codes       AS c_lng
-                           , codes       AS c_lng_cf
-                           , codes_tree  AS c_lng_ct
-                        WHERE cf.code_id = cf_n.code_id
-                          AND cf_n.name  = (v_acodekeyl.codifier_key).code_text
+                        WHERE cf.code_id       = cf_n.code_id
+                          AND cf_n.name        = (v_acodekeyl.codifier_key).code_text
                           AND cf_n.lng_of_name = c_lng.code_id
-                          AND c_lng.code_text  = (v_acodekeyl.key_lng).code_text
-                          AND c_lng_cf.code_text  = 'Languages'
-                          AND c_lng_ct.subcode_id = c_lng.code_id
-                          AND c_lng_ct.supercode_id = c_lng_cf.code_id
-                          AND cf.code_type != 'plain code';
+                          AND c_lng.code_text
+                                               = (v_acodekeyl.key_lng).code_text
+                          AND cf.code_type    != 'plain code';
 
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
@@ -1139,17 +1141,13 @@ BEGIN
                         FROM codes_names AS c_n
                            , codes_names AS cf_n
                            , codes_tree  AS ct
-                           , codes       AS c_lng
-                           , codes       AS c_lng_cf
-                           , codes_tree  AS c_lng_ct
+                           , languages   AS c_lng
                         WHERE c_n.name        = (v_acodekeyl.code_key).code_text
                           AND c_n.code_id     = ct.subcode_id
                           AND ct.supercode_id = (v_acodekeyl.codifier_key).code_id
                           AND c_n.lng_of_name = c_lng.code_id
-                          AND c_lng.code_text  = (v_acodekeyl.key_lng).code_text
-                          AND c_lng_cf.code_text  = 'Languages'
-                          AND c_lng_ct.subcode_id = c_lng.code_id
-                          AND c_lng_ct.supercode_id = c_lng_cf.code_id;
+                          AND c_lng.code_text
+                                              = (v_acodekeyl.key_lng).code_text;
 
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
@@ -1172,19 +1170,15 @@ BEGIN
                         FROM codes_names AS c_n
                            , codes_names AS cf_n
                            , codes_tree  AS ct
-                           , codes       AS c_lng
-                           , codes       AS c_lng_cf
-                           , codes_tree  AS c_lng_ct
-                        WHERE c_n.name        = (v_acodekeyl.code_key).code_text
-                          AND cf_n.name       = (v_acodekeyl.codifier_key).code_text
-                          AND c_n.code_id     = ct.subcode_id
-                          AND cf_n.code_id    = ct.supercode_id
-                          AND c_n.lng_of_name = c_lng.code_id
+                           , languages       AS c_lng
+                        WHERE c_n.name         = (v_acodekeyl.code_key).code_text
+                          AND cf_n.name        = (v_acodekeyl.codifier_key).code_text
+                          AND c_n.code_id      = ct.subcode_id
+                          AND cf_n.code_id     = ct.supercode_id
+                          AND c_n.lng_of_name  = c_lng.code_id
                           AND cf_n.lng_of_name = c_lng.code_id
-                          AND c_lng.code_text  = (v_acodekeyl.key_lng).code_text
-                          AND c_lng_cf.code_text  = 'Languages'
-                          AND c_lng_ct.subcode_id = c_lng.code_id
-                          AND c_lng_ct.supercode_id = c_lng_cf.code_id;
+                          AND c_lng.code_text
+                                               = (v_acodekeyl.key_lng).code_text;
 
                         GET DIAGNOSTICS rows_count = ROW_COUNT;
 
@@ -1398,17 +1392,13 @@ BEGIN
                 INTO c_id
                 FROM sch_<<$app_name$>>.codes       AS c
                    , sch_<<$app_name$>>.codes_names AS cn
-                   , sch_<<$app_name$>>.codes       AS c_lng
-                   , sch_<<$app_name$>>.codes       AS c_lng_cf
-                   , sch_<<$app_name$>>.codes_tree  AS c_lng_ct
+                   , sch_<<$app_name$>>.languages   AS c_lng
                 WHERE c.code_type        != 'plain code'
                   AND c.code_id           = cn.code_id
                   AND cn.name             = ((par_acodekeyl).code_key).code_text
                   AND cn.lng_of_name      = c_lng.code_id
-                  AND c_lng.code_text     = ((par_acodekeyl).key_lng).code_text
-                  AND c_lng_ct.subcode_id = c_lng.code_id
-                  AND c_lng_ct.supercode_id = c_lng_cf.code_id
-                  AND c_lng_cf.code_text  = 'Languages';
+                  AND c_lng.code_text
+                                          = ((par_acodekeyl).key_lng).code_text;
             WHEN 'c_nm (-l,+cf_id)' THEN
                 srch_prfd:= TRUE;
 
@@ -1463,17 +1453,13 @@ BEGIN
                 INTO c_id
                 FROM sch_<<$app_name$>>.codes_tree  AS ct
                    , sch_<<$app_name$>>.codes_names AS c_n
-                   , sch_<<$app_name$>>.codes       AS c_lng
-                   , sch_<<$app_name$>>.codes       AS c_lng_cf
-                   , sch_<<$app_name$>>.codes_tree  AS c_lng_ct
+                   , sch_<<$app_name$>>.languages   AS c_lng
                 WHERE ct.supercode_id  = ((par_acodekeyl).codifier_key).code_id
                   AND ct.subcode_id    = c_n.code_id
                   AND c_n.lng_of_name  = c_lng.code_id
-                  AND c_lng.code_text  = ((par_acodekeyl).key_lng).code_text
-                  AND c_n.name         = ((par_acodekeyl).code_key).code_text
-                  AND c_lng_ct.subcode_id = c_lng.code_id
-                  AND c_lng_ct.supercode_id = c_lng_cf.code_id
-                  AND c_lng_cf.code_text  = 'Languages';
+                  AND c_lng.code_text
+                                       = ((par_acodekeyl).key_lng).code_text
+                  AND c_n.name         = ((par_acodekeyl).code_key).code_text;
             WHEN 'c_nm (+l_nm,+cf_nm)' THEN
                 srch_prfd:= TRUE;
 
@@ -1482,19 +1468,15 @@ BEGIN
                 FROM sch_<<$app_name$>>.codes_tree  AS ct
                    , sch_<<$app_name$>>.codes_names AS cf_n
                    , sch_<<$app_name$>>.codes_names AS c_n
-                   , sch_<<$app_name$>>.codes       AS c_lng
-                   , sch_<<$app_name$>>.codes       AS c_lng_cf
-                   , sch_<<$app_name$>>.codes_tree  AS c_lng_ct
+                   , sch_<<$app_name$>>.languages   AS c_lng
                 WHERE ct.supercode_id  = cf_n.code_id
                   AND ct.subcode_id    = c_n.code_id
                   AND cf_n.lng_of_name = c_lng.code_id
                   AND c_n.lng_of_name  = c_lng.code_id
-                  AND c_lng.code_text  = ((par_acodekeyl).key_lng).code_text
+                  AND c_lng.code_text
+                                       = ((par_acodekeyl).key_lng).code_text
                   AND cf_n.name        = ((par_acodekeyl).codifier_key).code_text
-                  AND c_n.name         = ((par_acodekeyl).code_key).code_text
-                  AND c_lng_ct.subcode_id = c_lng.code_id
-                  AND c_lng_ct.supercode_id = c_lng_cf.code_id
-                  AND c_lng_cf.code_text  = 'Languages';
+                  AND c_n.name         = ((par_acodekeyl).code_key).code_text;
             ELSE
                 RAISE EXCEPTION 'An error occurred in function "code_id_of"! Unexpected "acodekeyl_type(par_acodekeyl)" output for code key: %!', show_acodekeyl(par_acodekeyl);
         END CASE;
@@ -1538,9 +1520,14 @@ CREATE OR REPLACE FUNCTION code_id_of_ambiguous() RETURNS integer AS $$
         SELECT sch_<<$app_name$>>.code_id_of(FALSE, sch_<<$app_name$>>.make_acodekeyl_bystr2('Common nominal codes set', 'ambiguous'));
 $$ LANGUAGE SQL;
 
-CREATE OR REPLACE FUNCTION code_id_of_language(lng_code_text varchar) RETURNS integer AS $$
-        SELECT sch_<<$app_name$>>.code_id_of(FALSE, sch_<<$app_name$>>.make_acodekeyl_bystr2('Languages', $1));
-$$ LANGUAGE SQL;
+CREATE OR REPLACE FUNCTION code_id_of_language(lng_code_text varchar) RETURNS integer
+LANGUAGE plpgsql
+AS $$
+DECLARE i integer;
+BEGIN   SELECT code_id INTO STRICT i FROM sch_<<$app_name$>>.languages WHERE code_text = lng_code_text;
+        RETURN i;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION code_id_of_entity(entity_code_text varchar) RETURNS integer AS $$
         SELECT sch_<<$app_name$>>.code_id_of(FALSE, sch_<<$app_name$>>.make_acodekeyl_bystr2('Named entities', $1));
@@ -1550,7 +1537,7 @@ COMMENT ON FUNCTION code_id_of_undefined()       IS 'code_id_of(FALSE, make_acod
 COMMENT ON FUNCTION code_id_of_unclassified()    IS 'code_id_of(FALSE, make_acodekeyl_bystr2(''Common nominal codes set'', ''unclassified''))';
 COMMENT ON FUNCTION code_id_of_error()           IS 'code_id_of(FALSE, make_acodekeyl_bystr2(''Common nominal codes set'', ''error''))';
 COMMENT ON FUNCTION code_id_of_ambiguous()       IS 'code_id_of(FALSE, make_acodekeyl_bystr2(''Common nominal codes set'', ''ambiguous''))';
-COMMENT ON FUNCTION code_id_of_language(varchar) IS 'code_id_of(FALSE, make_acodekeyl_bystr2(''Languages'', $1))';
+COMMENT ON FUNCTION code_id_of_language(varchar) IS 'SELECT code_id INTO STRICT i FROM sch_<<$app_name$>>.languages WHERE code_text = lng_code_text;';
 COMMENT ON FUNCTION code_id_of_entity(varchar)   IS 'code_id_of(FALSE, make_acodekeyl_bystr2(''Named entities'', $1))';
 
 -------------------------------------------------------------------------------
@@ -1608,16 +1595,12 @@ BEGIN
                 SELECT ct.subcode_id INTO d
                 FROM sch_<<$app_name$>>.codes_tree  AS ct
                    , sch_<<$app_name$>>.codes_names AS cn
-                   , sch_<<$app_name$>>.codes       AS c_lng
-                   , sch_<<$app_name$>>.codes       AS c_lng_cf
-                   , sch_<<$app_name$>>.codes_tree  AS c_lng_ct
+                   , sch_<<$app_name$>>.languages   AS c_lng
                 WHERE ct.supercode_id = cn.code_id
                   AND cn.name          = ((par_cf_keyl).code_key).code_text
                   AND cn.lng_of_name   = c_lng.code_id
-                  AND c_lng.code_text = ((par_cf_keyl).key_lng).code_text
-                  AND c_lng_ct.subcode_id = c_lng.code_id
-                  AND c_lng_ct.supercode_id = c_lng_cf.code_id
-                  AND c_lng_cf.code_text  = 'Languages'
+                  AND c_lng.code_text
+                                       = ((par_cf_keyl).key_lng).code_text
                   AND ct.dflt_subcode_isit;
             ELSE
                 RAISE EXCEPTION 'An error occurred in function "codifier_default_code"! Unexpected "codekeyl_type(par_cf_keyl)" output for code key: %!', show_codekeyl(par_cf_keyl);
@@ -1738,19 +1721,15 @@ BEGIN
                 INTO e
                 FROM sch_<<$app_name$>>.codes_tree  AS ct
                    , sch_<<$app_name$>>.codes_names AS cf_nm
-                   , sch_<<$app_name$>>.codes       AS c_lng
-                   , sch_<<$app_name$>>.codes       AS c_lng_cf
-                   , sch_<<$app_name$>>.codes_tree  AS c_lng_ct
+                   , sch_<<$app_name$>>.languages   AS c_lng
                    , sch_<<$app_name$>>.codes_tree  AS ct_nom
                    , sch_<<$app_name$>>.codes       AS c_undef
                    , sch_<<$app_name$>>.codes       AS c_nom
                 WHERE ct.supercode_id     = cf_nm.code_id
                   AND cf_nm.name          = ((par_acodekeyl).codifier_key).code_text
                   AND cf_nm.lng_of_name   = c_lng.code_id
-                  AND c_lng_ct.subcode_id = c_lng.code_id
-                  AND c_lng_ct.supercode_id = c_lng_cf.code_id
-                  AND c_lng_cf.code_text  = 'Languages'
-                  AND c_lng.code_text     = ((par_acodekeyl).key_lng).code_text
+                  AND c_lng.code_text
+                                          = ((par_acodekeyl).key_lng).code_text
                   AND ct.subcode_id       = c_undef.code_id
                   AND ct_nom.supercode_id = c_nom.code_id
                   AND ct_nom.subcode_id   = c_undef.code_id
@@ -1794,17 +1773,13 @@ BEGIN
                         INTO e
                         FROM sch_<<$app_name$>>.codes_tree  AS ct
                            , sch_<<$app_name$>>.codes_names AS cf_n
-                           , sch_<<$app_name$>>.codes       AS c_lng
-                           , sch_<<$app_name$>>.codes       AS c_lng_cf
-                           , sch_<<$app_name$>>.codes_tree  AS c_lng_ct
+                           , sch_<<$app_name$>>.languages    AS c_lng
                         WHERE ct.supercode_id     = cf_n.code_id
                           AND ct.subcode_id       = ((par_acodekeyl).code_key).code_id
                           AND cf_n.name           = ((par_acodekeyl).codifier_key).code_text
                           AND cf_n.lng_of_name    = c_lng.code_id
-                          AND c_lng.code_text     = ((par_acodekeyl).key_lng).code_text
-                          AND c_lng_ct.subcode_id = c_lng.code_id
-                          AND c_lng_ct.supercode_id = c_lng_cf.code_id
-                          AND c_lng_cf.code_text  = 'Languages';
+                          AND c_lng.code_text
+                                                  = ((par_acodekeyl).key_lng).code_text;
                     WHEN 'undef' THEN
                         e:= NULL;
                     ELSE
@@ -1870,17 +1845,13 @@ BEGIN
                 INTO e
                 FROM sch_<<$app_name$>>.codes_tree  AS ct
                    , sch_<<$app_name$>>.codes_names AS c_n
-                   , sch_<<$app_name$>>.codes       AS c_lng
-                   , sch_<<$app_name$>>.codes       AS c_lng_cf
-                   , sch_<<$app_name$>>.codes_tree  AS c_lng_ct
+                   , sch_<<$app_name$>>.languages   AS c_lng
                 WHERE ct.supercode_id  = ((par_acodekeyl).codifier_key).code_id
                   AND ct.subcode_id    = c_n.code_id
                   AND c_n.lng_of_name  = c_lng.code_id
-                  AND c_lng.code_text  = ((par_acodekeyl).key_lng).code_text
-                  AND c_n.name         = ((par_acodekeyl).code_key).code_text
-                  AND c_lng_ct.subcode_id = c_lng.code_id
-                  AND c_lng_ct.supercode_id = c_lng_cf.code_id
-                  AND c_lng_cf.code_text  = 'Languages';
+                  AND c_lng.code_text
+                                       = ((par_acodekeyl).key_lng).code_text
+                  AND c_n.name         = ((par_acodekeyl).code_key).code_text;
             WHEN 'c_nm (+l_nm,+cf_nm)' THEN
                 srchd:= TRUE;
 
@@ -1889,19 +1860,15 @@ BEGIN
                 FROM sch_<<$app_name$>>.codes_tree  AS ct
                    , sch_<<$app_name$>>.codes_names AS cf_n
                    , sch_<<$app_name$>>.codes_names AS c_n
-                   , sch_<<$app_name$>>.codes       AS c_lng
-                   , sch_<<$app_name$>>.codes       AS c_lng_cf
-                   , sch_<<$app_name$>>.codes_tree  AS c_lng_ct
+                   , sch_<<$app_name$>>.languages   AS c_lng
                 WHERE ct.supercode_id  = cf_n.code_id
                   AND ct.subcode_id    = c_n.code_id
                   AND cf_n.lng_of_name = c_lng.code_id
                   AND c_n.lng_of_name  = c_lng.code_id
-                  AND c_lng.code_text  = ((par_acodekeyl).key_lng).code_text
+                  AND c_lng.code_text
+                                       = ((par_acodekeyl).key_lng).code_text
                   AND cf_n.name        = ((par_acodekeyl).codifier_key).code_text
-                  AND c_n.name         = ((par_acodekeyl).code_key).code_text
-                  AND c_lng_ct.subcode_id = c_lng.code_id
-                  AND c_lng_ct.supercode_id = c_lng_cf.code_id
-                  AND c_lng_cf.code_text  = 'Languages';
+                  AND c_n.name         = ((par_acodekeyl).code_key).code_text;
 
             ELSE
                 RAISE EXCEPTION 'An error occurred in function "code_belongs_to_codifier"! Unexpected "acodekeyl_type(par_acodekeyl)" output for code key: %!', show_acodekeyl(par_acodekeyl);
@@ -2010,16 +1977,12 @@ BEGIN
                         SELECT c.*
                         FROM sch_<<$app_name$>>.codes       AS c
                            , sch_<<$app_name$>>.codes_names AS cn
-                           , sch_<<$app_name$>>.codes       AS c_lng
-                           , sch_<<$app_name$>>.codes       AS c_lng_cf
-                           , sch_<<$app_name$>>.codes_tree  AS c_lng_ct
+                           , sch_<<$app_name$>>.languages   AS c_lng
                         WHERE c.code_id           = cn.code_id
                           AND cn.name             = ((par_key).code_key).code_text
                           AND cn.lng_of_name      = c_lng.code_id
-                          AND c_lng.code_text     = ((par_key).key_lng).code_text
-                          AND c_lng_ct.subcode_id = c_lng.code_id
-                          AND c_lng_ct.supercode_id = c_lng_cf.code_id
-                          AND c_lng_cf.code_text  = 'Languages';
+                          AND c_lng.code_text
+                                                  = ((par_key).key_lng).code_text;
             WHEN 'undef' THEN
             ELSE
                 RAISE EXCEPTION 'An error occurred in function "get_codes_l"! Unexpected "codekeyl_type(par_key)" output for code key: %!', show_codekeyl(par_key);
@@ -2032,6 +1995,35 @@ $$;
 COMMENT ON FUNCTION get_codes_l(par_key t_code_key_by_lng) IS
 'Tolerant version of "get_code(...)".
 It doesn''t use "code_id_of(...)", and makes it possible to query for a set of codes (!plain or not!), that satisfy key condition.';
+
+-------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION get_codifier(par_if_exists boolean, par_key t_code_key_by_lng) RETURNS sch_<<$app_name$>>.codes
+LANGUAGE plpgsql
+SET search_path = sch_<<$app_name$>> -- , comn_funs, public
+AS $$
+DECLARE i integer := 0;
+        ccc sch_<<$app_name$>>.codes%ROWTYPE;
+BEGIN   IF par_if_exists IS NULL THEN
+                RAISE EXCEPTION 'An error occurred in function "get_codifier"! Value of "par_if_exists" can''t be NULL!';
+        END IF;
+        FOR ccc IN
+                SELECT c.*
+                FROM sch_<<$app_name$>>.get_codes_l(par_key) AS c
+        LOOP i:= i + 1;
+             IF i > 1 THEN
+                RAISE EXCEPTION 'An error occurred in function "get_codifier"! Too many (>1) results for given key %!', show_codekeyl(par_key);
+             END IF;
+        END LOOP;
+        IF i < 1 AND NOT par_if_exists THEN
+                RAISE EXCEPTION 'An error occurred in function "get_codifier"! Nothing is found by given key %!', show_codekeyl(par_key);
+        END IF;
+        RETURN ccc;
+END;
+$$;
+
+COMMENT ON FUNCTION get_codifier(par_if_exists boolean, par_acodekeyl t_code_key_by_lng) IS
+'Wrapper around get_codes_l(...) with control of size of results set.';
 
 -------------------------------------------------------------------------------
 
@@ -3139,7 +3131,9 @@ GRANT EXECUTE ON FUNCTION show_acodekey(par_key t_addressed_code_key) TO user_db
 GRANT EXECUTE ON FUNCTION show_codekeyl(par_key t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION show_acodekeyl(par_key t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION generalize_codekey(par_key t_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION generalize_codekey_ascf(par_key t_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION generalize_codekeyl(par_key t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION generalize_codekeyl_ascf(par_key t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION generalize_acodekey(par_key t_addressed_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION generalize_codekey_wcf(par_cf_codekey t_code_key, par_key t_code_key) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION generalize_codekeyl_wcf(par_cf_codekey t_code_key, par_key t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
@@ -3148,6 +3142,7 @@ GRANT EXECUTE ON FUNCTION acodekey_type(par_key t_addressed_code_key) TO user_db
 GRANT EXECUTE ON FUNCTION codekeyl_type(par_key t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION acodekeyl_type(par_key t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION mk_name_construction_input(par_lng t_code_key_by_lng, par_name varchar, par_entity t_code_key_by_lng, par_description varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+
 
 -- Lookup functions:
 
@@ -3167,6 +3162,7 @@ GRANT EXECUTE ON FUNCTION code_belongs_to_codifier(par_if_cf_exists boolean, par
 GRANT EXECUTE ON FUNCTION get_code(par_if_exists boolean, par_key t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION codifier_default_code(par_if_exists boolean, par_cf_keyl t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION get_codes_l(par_key t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
+GRANT EXECUTE ON FUNCTION get_codifier(par_if_exists boolean, par_acodekeyl t_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION get_nonplaincode_by_str(par_codifier varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION get_code_by_str(par_codifier varchar, par_code varchar) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
 GRANT EXECUTE ON FUNCTION get_codes_of_codifier(par_acodekeyl t_addressed_code_key_by_lng) TO user_db<<$db_name$>>_app<<$app_name$>>_data_admin, user_db<<$db_name$>>_app<<$app_name$>>_data_reader;
@@ -3210,3 +3206,8 @@ GRANT EXECUTE ON FUNCTION add_code_lng_names(par_if_exists boolean, par_c t_addr
 --------------------------------------------------------------------------
 
 \echo NOTICE >>>>> functions.init.sql [END]
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+\i modules/cf_dedictbls.init.sql

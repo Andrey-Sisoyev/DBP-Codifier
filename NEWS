@@ -118,3 +118,21 @@ Changes from 0.6.0 to 0.6.1
         , which finds all supercodes of target ($2), 
         belonging to mentioned codifier ($3)
 * Some minor changes.
+
+
+Changes from 0.6.1 to 0.7.0
+--------------------------------------------
+* Added "dedicated codifier-tables" infrastructure element. 
+  Table for metadata: "dedicated_codifiertables". 
+  Manage dedicated codifier-tables using new functions: 
+     ++ remove_dedicated_codifiertable(par_cf_key t_code_key_by_lng, par_tablename regclass, par_drop_table boolean)
+     ++ new_dedicated_codifiertable(par_cf_key t_code_key_by_lng, par_tablename name, par_table_exists boolean, par_fullindexing boolean)
+     ++ dedicated_codifiertable_by_tabname(par_table_name regclass)
+  (Notice: table creation/removal is allowed to application owner, 
+           not data admin
+  )
+  This innovation allows to avoid usage 
+  of "code_belongs_to_codifier" function in table constraints 
+  in favor to normal FOREIGN KEY.
+* API now uses dedicated codifier-table "languages" 
+  for work with language codes.

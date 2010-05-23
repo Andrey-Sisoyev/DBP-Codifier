@@ -12,11 +12,19 @@
 
 SET search_path TO sch_<<$app_name$>>; -- , comn_funs, public; -- sets only for current session
 
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+\i modules/cf_dedictbls.drop.sql
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
 \echo NOTICE >>>>> functions.drop.sql [BEGIN]
 
--------------------------------------------------------------------------------
--------------------------------------------------------------------------------
--------------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
 
 -- DROP FUNCTION IF EXISTS ...
 -- DROP TYPE     IF EXISTS ...
@@ -48,7 +56,9 @@ DROP FUNCTION IF EXISTS show_acodekey(par_key t_addressed_code_key);
 DROP FUNCTION IF EXISTS show_codekeyl(par_key t_code_key_by_lng);
 DROP FUNCTION IF EXISTS show_acodekeyl(par_key t_addressed_code_key_by_lng);
 DROP FUNCTION IF EXISTS generalize_codekey(par_key t_code_key);
+DROP FUNCTION IF EXISTS generalize_codekey_ascf(par_key t_code_key);
 DROP FUNCTION IF EXISTS generalize_codekeyl(par_key t_code_key_by_lng);
+DROP FUNCTION IF EXISTS generalize_codekeyl_ascf(par_key t_code_key_by_lng);
 DROP FUNCTION IF EXISTS generalize_acodekey(par_key t_addressed_code_key);
 DROP FUNCTION IF EXISTS generalize_codekey_wcf(par_cf_codekey t_code_key, par_key t_code_key);
 DROP FUNCTION IF EXISTS generalize_codekeyl_wcf(par_cf_codekey t_code_key, par_key t_code_key_by_lng);
@@ -76,6 +86,7 @@ DROP FUNCTION IF EXISTS code_belongs_to_codifier(par_if_cf_exists boolean, par_a
 DROP FUNCTION IF EXISTS get_code(par_if_exists boolean, par_key t_addressed_code_key_by_lng);
 DROP FUNCTION IF EXISTS codifier_default_code(par_if_exists boolean, par_cf_keyl t_code_key_by_lng);
 DROP FUNCTION IF EXISTS get_codes_l(par_key t_code_key_by_lng);
+DROP FUNCTION IF EXISTS get_codifier(par_if_exists boolean, par_acodekeyl t_code_key_by_lng);
 DROP FUNCTION IF EXISTS get_nonplaincode_by_str(par_codifier varchar);
 DROP FUNCTION IF EXISTS get_code_by_str(par_codifier varchar, par_code varchar);
 DROP FUNCTION IF EXISTS get_codes_of_codifier(par_acodekeyl t_addressed_code_key_by_lng);
@@ -134,6 +145,3 @@ DROP TYPE IF EXISTS t_code_key;
 -------------------------------------------------------------------------------
 
 \echo NOTICE >>>>> functions.drop.sql [END]
-
--- \i modules/module1.drop.sql
--- \i modules/module2.drop.sql

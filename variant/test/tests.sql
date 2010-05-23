@@ -1180,6 +1180,67 @@ SELECT add_code_lng_names(
 SELECT   remove_code(TRUE, make_acodekeyl_bystr1('999'), TRUE, TRUE, TRUE);
 SELECT find_subcodes(TRUE, make_acodekeyl_bystr1('101'), TRUE, FALSE);
 
+--------------------
+
+\echo >>>>Testing dedicated codifier-tables
+
+SELECT new_codifier_w_subcodes(
+                make_codekeyl_bystr('Root')
+              , ROW('DCT test cf', 'codifier') :: code_construction_input
+              , 'aaa'
+              , VARIADIC ARRAY[
+                        ROW('aaa', 'plain code')
+                      , ROW('bbb', 'plain code')
+                      , ROW('ccc', 'plain code')
+                      , ROW('ddd', 'plain code')
+                      ] :: code_construction_input[]
+              );
+
+\echo >>>>NOTICE: should raise error (dct not found)
+SELECT new_dedicated_codifiertable(
+                make_codekeyl_bystr('DCT test cf')
+              , 'dct_test_cf'
+              , TRUE
+              , TRUE
+              );
+\c <<$db_name$>> user_db<<$db_name$>>_app<<$app_name$>>_owner
+SELECT new_dedicated_codifiertable(
+                make_codekeyl_bystr('DCT test cf')
+              , 'dct_test_cf'
+              , FALSE
+              , TRUE
+              );
+\c <<$db_name$>> user_db<<$db_name$>>_app<<$app_name$>>_data_admin
+SELECT * FROM dct_test_cf;
+
+SELECT code_id_of(FALSE, make_acodekeyl_bystr2('DCT test cf', 'aaa'));
+UPDATE codes SET code_text = 'aaa1' WHERE code_id IN (SELECT code_id_of(FALSE, make_acodekeyl_bystr2('DCT test cf', 'aaa')));
+UPDATE codes SET code_text = 'DCT test codifier' WHERE code_id IN (SELECT code_id_of(FALSE, make_acodekeyl_bystr1('DCT test cf')));
+SELECT * FROM dedicated_codifiertables;
+SELECT * FROM dct_test_cf;
+DELETE FROM codes WHERE code_id IN (SELECT code_id_of(FALSE, make_acodekeyl_bystr2('DCT test codifier', 'aaa1')));
+SELECT * FROM dct_test_cf;
+INSERT INTO codes (code_id, code_text, code_type) VALUES (-1000, 'aaa_reborn', 'plain code');
+INSERT INTO codes_tree (supercode_id, subcode_id) VALUES (code_id_of(FALSE, make_acodekeyl_bystr1('DCT test codifier')), -1000);
+SELECT * FROM dct_test_cf;
+UPDATE dedicated_codifiertables SET full_indexing = FALSE WHERE codifier_text = 'DCT test codifier';
+INSERT INTO codes (code_id, code_text, code_type) VALUES (-1001, 'aaa_reborn2', 'plain code');
+INSERT INTO codes_tree (supercode_id, subcode_id) VALUES (code_id_of(FALSE, make_acodekeyl_bystr1('DCT test codifier')), -1001);
+SELECT * FROM dct_test_cf;
+INSERT INTO dct_test_cf(code_id, code_text) VALUES (-1001, 'aaa_reborn2');
+SELECT * FROM dct_test_cf;
+
+SELECT remove_dedicated_codifiertable(make_codekeyl_bystr('DCT test codifier'), 'dct_test_cf', FALSE);
+\c <<$db_name$>> user_db<<$db_name$>>_app<<$app_name$>>_owner
+SELECT remove_dedicated_codifiertable(make_codekeyl_bystr('DCT test codifier'), 'dct_test_cf', TRUE);
+\c <<$db_name$>> user_db<<$db_name$>>_app<<$app_name$>>_data_admin
+SELECT * FROM dedicated_codifiertables;
+SELECT remove_code(TRUE, make_acodekeyl_bystr1('DCT test codifier'), TRUE, TRUE, TRUE);
+
+\echo >>>>Testing dedicated codifier-tables FINISHED
+
+--------------------
+
 SELECT * FROM codes;
 SELECT * FROM codes_tree;
 SELECT * FROM codes_names;
