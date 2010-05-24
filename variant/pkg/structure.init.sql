@@ -56,7 +56,7 @@ CREATE SEQUENCE plain_codes_ids_seq
         NO CYCLE;
 
 CREATE TABLE codes (
-        code_id            integer   NOT NULL PRIMARY KEY
+        code_id            integer   NOT NULL PRIMARY KEY USING INDEX TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs
       , code_type          code_type NOT NULL
       , code_text          varchar   NOT NULL
       , additional_field_1 varchar       NULL
@@ -75,7 +75,7 @@ CREATE TABLE codes_tree (
       , additional_field_2 varchar       NULL
       , additional_field_3 varchar       NULL
       , additional_field_4 varchar       NULL
-      , PRIMARY KEY (supercode_id, subcode_id)
+      , PRIMARY KEY (supercode_id, subcode_id) USING INDEX TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs
 ) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
 
 CREATE INDEX codifiers_idx ON codes_tree(supercode_id) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs;
@@ -140,7 +140,7 @@ A general template for child-tables of "named_in_languages":
 ======================================================
 CREATE TABLE <your_object>s_names (
         <your_object>_id integer NOT NULL
-      , PRIMARY KEY (<your_object>_id, lng_of_name)
+      , PRIMARY KEY (<your_object>_id, lng_of_name) USING INDEX TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs
       , FOREIGN KEY (<your_object>_id) REFERENCES <your_object>s(<your_object>_id)
                                                                  ON DELETE CASCADE  ON UPDATE CASCADE
       , FOREIGN KEY (lng_of_name)      REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
@@ -163,7 +163,7 @@ Notice: if you inherit from both "names" and "named_in_languages", then it''s be
 
 CREATE TABLE codes_names (
         code_id     integer NOT NULL
-      , PRIMARY KEY (code_id, lng_of_name)
+      , PRIMARY KEY (code_id, lng_of_name) USING INDEX TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs
       , FOREIGN KEY (code_id)     REFERENCES codes(code_id) ON DELETE CASCADE  ON UPDATE CASCADE
       , FOREIGN KEY (lng_of_name) REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
       , FOREIGN KEY (entity)      REFERENCES codes(code_id) ON DELETE RESTRICT ON UPDATE CASCADE
@@ -174,7 +174,7 @@ CREATE TABLE codes_names (
 -------------------------------------------------------------------------------
 
 CREATE TABLE languages (
-          code_id     integer PRIMARY KEY
+          code_id     integer PRIMARY KEY     USING INDEX TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs
         , code_text   varchar NOT NULL UNIQUE USING INDEX TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs
         , FOREIGN KEY (code_id) REFERENCES codes(code_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>;
@@ -184,7 +184,7 @@ COMMENT ON TABLE languages IS 'Dedicated codifier-table. Registered in "dedicate
 ----------------------
 
 CREATE TABLE dedicated_codifiertables (
-        dedicated_codifiertable_id serial PRIMARY KEY
+        dedicated_codifiertable_id serial PRIMARY KEY USING INDEX TABLESPACE tabsp_<<$db_name$>>_<<$app_name$>>_idxs
       , codifier_id   integer  NOT NULL
       , table_oid     oid      NOT NULL -- REFERENCES pg_class(oid) ON DELETE RESTRICT ON UPDATE CASCADE
       , codifier_text varchar  NOT NULL
